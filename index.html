@@ -2733,7 +2733,7 @@
       const resultLine = result.result ? `\nReturn value: ${result.result}` : '';
       const filesLine = (Array.isArray(result.outputFiles) && result.outputFiles.length)
         ? `\nNayi files ban gayin (user ko already download button ki tarah dikh rahi hain, tujhe sirf naam mention karna hai, content dobara mat likh): ${result.outputFiles.map(f => f.name).join(', ')}`
-        : '';
+        : `\nKOI FILE CREATE/SAVE NAHI HUI iss run mein. Agar user ne file maangi thi, to "file ban gayi"/"successfully create ho gayi"/"download button de diya" jaisa KABHI mat bol — saaf bata ki file nahi bani (code mein likhna reh gaya, ya path/filename galat tha, ya error aayi), aur agar zaroorat ho to sahi kiya hua code doosri baar bhej.`;
       return `[Python code run ho gaya, output:]\n${out || '(koi stdout output nahi tha)'}${resultLine}${filesLine}\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
     }
     return `[Python code run karte waqt error aayi:]\n${result.error || 'Unknown error'}\n${result.stdout ? `\nAb tak ka stdout:\n${result.stdout}` : ''}\n\n[User ko batao ki code mein kya galat hua, aur agar possible ho to sahi kiya hua code doosri baar suggest kar.]`;
