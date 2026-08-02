@@ -73,6 +73,34 @@
     background:var(--amber);
     box-shadow:0 0 8px rgba(232,163,61,0.7);
   }
+  .bridge-status-line{
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; color:var(--paper-dim);
+    margin:2px 0 14px;
+  }
+  .bridge-status-line .dot{width:8px;height:8px;border-radius:50%;background:var(--line);}
+  .bridge-status-line .dot.ok{background:var(--sage); box-shadow:0 0 6px rgba(124,148,115,.6);}
+  .bridge-status-line .dot.bad{background:var(--rust);}
+  .bridge-field-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    margin:14px 0 6px;
+  }
+  .bridge-token-row{display:flex; gap:6px;}
+  .bridge-token-row input{flex:1; min-width:0;}
+  .bridge-token-row button{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:6px;
+    padding:0 12px;
+    cursor:pointer;
+  }
 
   /* ── sessions drawer ── */
   .overlay{
@@ -458,6 +486,73 @@
   }
   .copy-btn:active{transform:scale(0.94);}
   .copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
+  .codeblock-actions{display:flex;gap:6px;}
+  .run-btn{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--sage);
+    border:1px solid var(--sage-dim);
+    border-radius:5px;
+    padding:3px 9px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .run-btn:active{transform:scale(0.94);}
+  .run-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .run-btn.running{color:var(--rust); border-color:var(--rust);}
+  .run-btn.disabled-hint{opacity:.45; cursor:not-allowed;}
+  .codeblock-output{
+    border-top:1px solid var(--line);
+    background:#0d0b09;
+    padding:8px 12px;
+    max-height:220px;
+    overflow-y:auto;
+    display:none;
+  }
+  .codeblock-output.show{display:block;}
+  .codeblock-output pre{
+    margin:0;
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    line-height:1.5;
+    color:#c9c0ab;
+  }
+  .codeblock-output .exit-line{
+    margin-top:6px;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .codeblock-output .exit-line.ok{color:var(--sage);}
+  .codeblock-output .exit-line.fail{color:var(--rust);}
+  .codeblock-stdin{
+    display:flex;
+    gap:6px;
+    border-top:1px solid var(--line);
+    padding:6px 10px;
+  }
+  .codeblock-stdin input{
+    flex:1;
+    min-width:0;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px 8px;
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+  }
+  .codeblock-stdin button{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--amber);
+    padding:6px 10px;
+    cursor:pointer;
+  }
   .codeblock pre{
     margin:0;
     padding:10px 12px;
@@ -687,9 +782,8 @@
   }
   .ask-user-sheet-opt{
     display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
+    align-items:flex-start;
+    gap:12px;
     width:100%;
     padding:14px 16px;
     background:transparent;
@@ -698,6 +792,7 @@
     color:var(--paper);
     font:inherit;
     font-size:14.5px;
+    line-height:1.45;
     text-align:left;
     cursor:pointer;
   }
@@ -706,12 +801,14 @@
   .ask-user-sheet-opt.selected{color:var(--amber); font-weight:600;}
   .ask-user-sheet-opt .chk{
     width:18px; height:18px;
+    margin-top:1px; /* pehli line ke text-baseline ke saath visually align karta hai */
     border-radius:50%;
     border:1.5px solid var(--paper-dim);
     flex:0 0 auto;
   }
   .ask-user-sheet-opt .chk.sq{border-radius:4px;}
   .ask-user-sheet-opt.selected .chk{border-color:var(--amber); background:var(--amber);}
+  .ask-user-sheet-opt span:not(.chk){flex:1 1 auto; min-width:0;}
   .ask-user-sheet-confirm{
     display:block;
     width:100%;
@@ -977,9 +1074,22 @@
       </div>
       <span class="settings-row-arrow"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span>
     </button>
+
+    <div class="drawer-label" style="margin-top:18px;">Termux Bridge</div>
+    <button type="button" id="bridgeRow" class="settings-row">
+      <div class="settings-row-main">
+        <span class="settings-row-title">Status</span>
+        <span class="settings-row-value" id="bridgeStatusDisplay">Disconnected</span>
+      </div>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span>
+    </button>
     <!-- Aage aur settings groups (jaise Appearance, Notifications, Data,
          About, etc.) yahin isi neeche add honge -->
   </div>
+</div>
+
+<div id="bridgeModalOverlay" class="app-modal-overlay">
+  <div id="bridgeModal" class="app-modal"></div>
 </div>
 
 <div id="profileModalOverlay" class="app-modal-overlay">
@@ -1060,6 +1170,10 @@
   const $profileNameDisplay = document.getElementById('profileNameDisplay');
   const $profileModalOverlay = document.getElementById('profileModalOverlay');
   const $profileModal = document.getElementById('profileModal');
+  const $bridgeRow = document.getElementById('bridgeRow');
+  const $bridgeStatusDisplay = document.getElementById('bridgeStatusDisplay');
+  const $bridgeModalOverlay = document.getElementById('bridgeModalOverlay');
+  const $bridgeModal = document.getElementById('bridgeModal');
   const $onboardOverlay = document.getElementById('onboardOverlay');
   const $onboardNameInput = document.getElementById('onboardNameInput');
   const $onboardSaveBtn = document.getElementById('onboardSaveBtn');
@@ -1100,6 +1214,155 @@
     } catch (e) {
       console.warn('Profile save fail:', e);
     }
+  }
+
+  // ── Termux Bridge: local device connection (loopback-only, token-gated) ──
+  // Config sirf { port, token } hai — token wahi hai jo user ke Termux mein
+  // `npm start` chalane par ek baar print hota hai, aur yahan paste kiya jaata hai.
+  const BRIDGE_KEY = 'chamanai_bridge_v1';
+  function loadBridgeConfig() {
+    try { return JSON.parse(localStorage.getItem(BRIDGE_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveBridgeConfig(cfg) {
+    try { localStorage.setItem(BRIDGE_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+  }
+
+  function bridgeStatusLabel(status) {
+    if (status === 'connected') return 'Connected';
+    if (status === 'connecting') return 'Connecting…';
+    if (status === 'denied') return 'Permission ya token issue';
+    return 'Disconnected';
+  }
+
+  // Ek hi global Bridge — kyunki server-side bhi ek time pe sirf ek hi command
+  // chalata hai, isliye "kis codeblock ki run chal rahi hai" bhi yahin _current
+  // handler ki tarah track hota hai.
+  const Bridge = {
+    ws: null,
+    status: 'disconnected', // disconnected | connecting | connected | denied
+    tools: {},
+    listeners: new Set(),
+    _current: null,
+
+    notify() { this.listeners.forEach((fn) => { try { fn(this.status); } catch (e) {} }); },
+
+    async ensureConnected() {
+      if (this.status === 'connected' && this.ws && this.ws.readyState === WebSocket.OPEN) return true;
+      if (this.status === 'connecting') {
+        return new Promise((resolve) => {
+          const check = () => {
+            if (this.status === 'connected') resolve(true);
+            else if (this.status === 'connecting') setTimeout(check, 200);
+            else resolve(false);
+          };
+          check();
+        });
+      }
+      return this.connect();
+    },
+
+    async connect() {
+      const cfg = loadBridgeConfig();
+      const port = cfg.port || 8787;
+      const token = cfg.token || '';
+      if (!token) { this.status = 'disconnected'; this.notify(); return false; }
+
+      this.status = 'connecting';
+      this.notify();
+
+      // Pehle ek normal fetch — isi se Chrome/Firefox ka Local Network Access
+      // permission popup trigger hota hai (WebSocket errors se generic/vague
+      // failure milta hai, fetch se cleaner signal milta hai ki permission
+      // allow hui ya nahi).
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/health?token=${encodeURIComponent(token)}`);
+        if (!res.ok) throw new Error('auth_failed');
+        const data = await res.json();
+        this.tools = data.tools || {};
+      } catch (err) {
+        this.status = 'denied';
+        this.notify();
+        return false;
+      }
+
+      return new Promise((resolve) => {
+        let settled = false;
+        let ws;
+        try {
+          ws = new WebSocket(`ws://127.0.0.1:${port}/bridge?token=${encodeURIComponent(token)}`);
+        } catch (e) {
+          this.status = 'denied'; this.notify();
+          resolve(false);
+          return;
+        }
+        ws.addEventListener('message', (e) => {
+          let msg;
+          try { msg = JSON.parse(e.data); } catch (err) { return; }
+          if (msg.type === 'ready') {
+            this.tools = msg.tools || {};
+            this.status = 'connected';
+            this.notify();
+            if (!settled) { settled = true; resolve(true); }
+          }
+          this.dispatch(msg);
+        });
+        ws.addEventListener('close', () => {
+          this.status = 'disconnected';
+          this.notify();
+          if (!settled) { settled = true; resolve(false); }
+        });
+        ws.addEventListener('error', () => {
+          this.status = 'denied';
+          this.notify();
+          if (!settled) { settled = true; resolve(false); }
+        });
+        this.ws = ws;
+      });
+    },
+
+    disconnect() {
+      if (this.ws) { try { this.ws.close(); } catch (e) {} }
+      this.ws = null;
+      this.status = 'disconnected';
+      this.notify();
+    },
+
+    dispatch(msg) {
+      const runner = this._current;
+      if (!runner) return;
+      if (msg.type === 'output') runner.onOutput(msg.stream, msg.data);
+      else if (msg.type === 'exit') runner.onExit(msg.code);
+      else if (msg.type === 'error') runner.onError(msg.message);
+    },
+
+    async run(command, handlers) {
+      this._current = handlers;
+      const ok = await this.ensureConnected();
+      if (!ok) {
+        handlers.onError('Bridge se connect nahi ho saka — Settings → Termux Bridge check karo (Termux mein server chal raha hai? Token sahi paste hua? Browser ka "local network" permission allow kiya?).');
+        return;
+      }
+      this.ws.send(JSON.stringify({ type: 'start', command }));
+    },
+
+    sendStdin(data) {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'stdin', data }));
+      }
+    },
+
+    kill() {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'kill' }));
+      }
+    },
+  };
+
+  // Termux run ka poora result agla "user" turn ban ke wapas model ko jaata hai —
+  // web_search/run_code jaisa hi pattern, isliye AI ko poora context milta hai.
+  function formatTermuxResultForModel(command, output, exitCode) {
+    const trimmed = (output || '').trim();
+    return `[Termux command run hui:]\n$ ${command}\n\n[Output:]\n${trimmed || '(koi output nahi tha)'}\n\n[Exit code: ${exitCode}]\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
   }
 
   function loadSessions() {
@@ -1275,6 +1538,7 @@
   const sessionModal = makeModal($sessionModalOverlay, $sessionModal);
   const attachModal = makeModal($attachModalOverlay, $attachModal);
   const profileModal = makeModal($profileModalOverlay, $profileModal);
+  const bridgeModal = makeModal($bridgeModalOverlay, $bridgeModal);
 
   // ── Settings page ───────────────────────────────────────────────────
   function updateProfileDisplay() {
@@ -1282,8 +1546,14 @@
     $profileNameDisplay.textContent = (profile && profile.name) ? profile.name : 'Naam set nahi hai';
   }
 
+  function updateBridgeStatusDisplay() {
+    $bridgeStatusDisplay.textContent = bridgeStatusLabel(Bridge.status);
+  }
+  Bridge.listeners.add(updateBridgeStatusDisplay);
+
   function openSettings() {
     updateProfileDisplay();
+    updateBridgeStatusDisplay();
     closeDrawer();
     $settingsPage.classList.add('open');
   }
@@ -1292,6 +1562,96 @@
   }
   $settingsBtn.addEventListener('click', openSettings);
   $settingsBackBtn.addEventListener('click', closeSettings);
+
+  function showBridgeSettingsModal() {
+    const cfg = loadBridgeConfig();
+    bridgeModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Termux Bridge';
+      root.appendChild(title);
+
+      const desc = document.createElement('div');
+      desc.className = 'app-modal-text';
+      desc.textContent = 'Apne Termux mein "npm start" chalao — jo token print hoga, wahi neeche paste karo.';
+      root.appendChild(desc);
+
+      const statusLine = document.createElement('div');
+      statusLine.className = 'bridge-status-line';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      const label = document.createElement('span');
+      function refreshStatus() {
+        label.textContent = bridgeStatusLabel(Bridge.status);
+        dot.className = 'dot' + (Bridge.status === 'connected' ? ' ok' : Bridge.status === 'denied' ? ' bad' : '');
+      }
+      refreshStatus();
+      statusLine.append(dot, label);
+      root.appendChild(statusLine);
+
+      const portLabel = document.createElement('div');
+      portLabel.className = 'bridge-field-label';
+      portLabel.textContent = 'Port';
+      root.appendChild(portLabel);
+      const portInput = document.createElement('input');
+      portInput.type = 'number';
+      portInput.className = 'app-modal-input';
+      portInput.value = cfg.port || 8787;
+      root.appendChild(portInput);
+
+      const tokenLabel = document.createElement('div');
+      tokenLabel.className = 'bridge-field-label';
+      tokenLabel.textContent = 'Token';
+      root.appendChild(tokenLabel);
+      const tokenRow = document.createElement('div');
+      tokenRow.className = 'bridge-token-row';
+      const tokenInput = document.createElement('input');
+      tokenInput.type = 'text';
+      tokenInput.className = 'app-modal-input';
+      tokenInput.placeholder = 'Termux terminal se copy karo';
+      tokenInput.value = cfg.token || '';
+      tokenRow.appendChild(tokenInput);
+      root.appendChild(tokenRow);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const disconnectBtn = document.createElement('button');
+      disconnectBtn.type = 'button';
+      disconnectBtn.className = 'sm-cancel';
+      disconnectBtn.textContent = 'Disconnect';
+      disconnectBtn.addEventListener('click', () => {
+        Bridge.disconnect();
+        refreshStatus();
+        updateBridgeStatusDisplay();
+      });
+      footer.appendChild(disconnectBtn);
+
+      const connectBtn = document.createElement('button');
+      connectBtn.type = 'button';
+      connectBtn.className = 'sm-confirm';
+      connectBtn.textContent = 'Save & Connect';
+      connectBtn.addEventListener('click', async () => {
+        const port = Number(portInput.value) || 8787;
+        const token = tokenInput.value.trim();
+        saveBridgeConfig({ port, token });
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Connecting…';
+        const ok = await Bridge.connect();
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Save & Connect';
+        refreshStatus();
+        updateBridgeStatusDisplay();
+        desc.textContent = ok
+          ? 'Connected! Ab AI ke suggest kiye shell commands ko "▶ Run" se apne Termux pe chala sakte ho.'
+          : 'Connect nahi ho paya — port/token check karo, ya browser ka "local network" permission popup allow karo.';
+      });
+      footer.appendChild(connectBtn);
+
+      root.appendChild(footer);
+    });
+  }
+  $bridgeRow.addEventListener('click', showBridgeSettingsModal);
 
   function showProfileEditModal() {
     const profile = loadProfile() || {};
@@ -2163,14 +2523,34 @@
     return `<div class="md-table-wrap"><table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
   }
 
+  const SHELL_LANGS = new Set(['bash', 'sh', 'shell', 'zsh', 'termux']);
+
   function codeBlockHtml(id) {
     const { lang, code } = codeStore[id];
+    const isShell = SHELL_LANGS.has((lang || '').toLowerCase());
+
+    const actionsHtml = isShell
+      ? `<div class="codeblock-actions">
+           <button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>
+           <button type="button" class="run-btn" id="runbtn-${id}" onclick="runShellBlock('${id}')">▶ Run</button>
+         </div>`
+      : `<button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>`;
+
+    const outputHtml = isShell
+      ? `<div class="codeblock-output" id="out-${id}"><pre id="outpre-${id}"></pre><div class="exit-line" id="exitline-${id}"></div></div>
+         <div class="codeblock-stdin" id="stdinrow-${id}" style="display:none;">
+           <input type="text" id="stdin-${id}" placeholder="Input bhejo (process wait kar raha ho tab)…">
+           <button type="button" onclick="sendShellStdin('${id}')">Send</button>
+         </div>`
+      : '';
+
     return `<div class="codeblock" data-id="${id}">
       <div class="codeblock-head">
         <span class="lang">${escapeHtml(lang || 'text')}</span>
-        <button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>
+        ${actionsHtml}
       </div>
       <pre><code>${escapeHtml(code)}</code></pre>
+      ${outputHtml}
     </div>`;
   }
 
@@ -2283,6 +2663,73 @@
         btn.classList.remove('copied');
       }, 1500);
     });
+  };
+
+  // Shell codeblock ka "▶ Run" — Bridge se connect karke command chalata hai,
+  // live stdout/stderr dikhata hai, aur khatam hone par poora result agla
+  // "user" turn ki tarah AI ko wapas bhej deta hai (jaise ask_user ka jawab).
+  window.runShellBlock = function (id) {
+    const entry = codeStore[id];
+    if (!entry) return;
+    const runBtn = document.getElementById(`runbtn-${id}`);
+    const outBox = document.getElementById(`out-${id}`);
+    const outPre = document.getElementById(`outpre-${id}`);
+    const exitLine = document.getElementById(`exitline-${id}`);
+    const stdinRow = document.getElementById(`stdinrow-${id}`);
+    if (!runBtn || !outBox) return;
+
+    outBox.classList.add('show');
+    outPre.textContent = '';
+    exitLine.textContent = '';
+    exitLine.className = 'exit-line';
+    stdinRow.style.display = 'flex';
+    runBtn.textContent = '⏹ Stop';
+    runBtn.classList.add('running');
+    runBtn.onclick = () => window.stopShellBlock(id);
+
+    let fullOutput = '';
+
+    Bridge.run(entry.code, {
+      onOutput(stream, data) {
+        fullOutput += data;
+        outPre.textContent += data;
+        outBox.scrollTop = outBox.scrollHeight;
+      },
+      onExit(code) {
+        runBtn.textContent = '▶ Run';
+        runBtn.classList.remove('running');
+        runBtn.onclick = () => window.runShellBlock(id);
+        stdinRow.style.display = 'none';
+        exitLine.textContent = code === 0 ? '✓ Exit code 0' : `✗ Exit code ${code}`;
+        exitLine.className = 'exit-line ' + (code === 0 ? 'ok' : 'fail');
+        scrollBottom();
+        if (!busy) {
+          send(formatTermuxResultForModel(entry.code, fullOutput, code), `Termux run (exit ${code})`, []);
+        }
+      },
+      onError(message) {
+        runBtn.textContent = '▶ Run';
+        runBtn.classList.remove('running');
+        runBtn.onclick = () => window.runShellBlock(id);
+        stdinRow.style.display = 'none';
+        exitLine.textContent = '✗ ' + message;
+        exitLine.className = 'exit-line fail';
+        scrollBottom();
+      },
+    });
+  };
+
+  window.stopShellBlock = function (id) {
+    Bridge.kill();
+  };
+
+  window.sendShellStdin = function (id) {
+    const input = document.getElementById(`stdin-${id}`);
+    const outPre = document.getElementById(`outpre-${id}`);
+    if (!input || !input.value) return;
+    Bridge.sendStdin(input.value);
+    if (outPre) outPre.textContent += `> ${input.value}\n`;
+    input.value = '';
   };
 
   // ── Sound FX (typing ticks) ──────────────────────────────────────────
@@ -2406,6 +2853,7 @@
   // se milta hai. Naya action-type add karna ho toh bas ek naya key daal do.
   const ACTION_HANDLERS = {
     ask_user: renderAskUser,
+    termux_run: renderTermuxRun,
   };
 
   function renderAction(action, wrap) {
@@ -2440,6 +2888,21 @@
       box.appendChild(chip);
     }
     wrap.appendChild(box);
+    scrollBottom();
+  }
+
+  // [ACTION:termux_run]{"command":"..."} ke liye — bilkul same codeblock UI
+  // reuse karta hai jo ```bash fenced blocks ke liye already bani hai (Run/Stop/
+  // stdin sab wahi), taaki AI structured action se bheje ya plain code-fence
+  // se, user ko ek hi consistent widget dikhe.
+  function renderTermuxRun(payload, wrap) {
+    const command = payload && payload.command;
+    if (typeof command !== 'string' || !command.trim()) return;
+    const id = 'cb' + (cbCounter++);
+    codeStore[id] = { lang: 'bash', code: command.trim() };
+    const holder = document.createElement('div');
+    holder.innerHTML = codeBlockHtml(id);
+    wrap.appendChild(holder.firstElementChild);
     scrollBottom();
   }
 
@@ -2507,7 +2970,7 @@
         label.textContent = opt;
         const chk = document.createElement('span');
         chk.className = 'chk sq';
-        btn.append(label, chk);
+        btn.append(chk, label);
         btn.addEventListener('click', () => {
           if (selected.has(opt)) {
             selected.delete(opt);
@@ -2539,7 +3002,7 @@
         label.textContent = opt;
         const chk = document.createElement('span');
         chk.className = 'chk';
-        btn.append(label, chk);
+        btn.append(chk, label);
         btn.addEventListener('click', () => {
           close();
           markAnswered(opt);

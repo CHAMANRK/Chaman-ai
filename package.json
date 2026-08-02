@@ -1,6 +1,12 @@
 {
-  "name": "chaman-ai-chat",
-  "version": "3.0.0",
-  "private": true,
-  "description": "Chaman AI — chat-only rebuild. Groq → OpenRouter → Cerebras → Mistral fallback."
+  "name": "chaman-ai-termux-bridge",
+  "version": "1.0.0",
+  "description": "Local bridge server — apne Termux device ko Chaman AI se connect karta hai (loopback-only, token-gated).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
 }
