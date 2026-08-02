@@ -14,7 +14,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/chaman-ai.git
+   https://github.com/CHAMANRK/Chaman-ai.git
    cd chaman-ai
    ```
 2. **Deploy to Vercel** (or run locally)
