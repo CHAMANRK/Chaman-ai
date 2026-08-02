@@ -1,4 +1,22 @@
 <!DOCTYPE html>
+<!--
+  ★★★ ICON RULE (poori app ke liye) ★★★
+  Is app mein SIRF icons8.com ka "LED" style use hota hai:
+    https://icons8.com/icons/set/led
+  URL pattern: https://img.icons8.com/led/{size}/{icon-name}.png
+  Koi bhi doosra icons8 style (ios7, m_outlined, dotty, material, etc.) YA kisi
+  aur site/icon-pack ka icon is app mein add mat karo — poori app mein ek hi
+  consistent LED look rakhna hai. Naya icon chahiye ho to pehle
+  https://icons8.com/icons/set/led pe search karke exact "LED style" URL
+  confirm karo (icon ke page pe "meta-og:image" / Download button se), phir
+  hi use karo.
+
+  ★ ABHI KE OPEN ITEMS: LED style ek chhota icon-set hai (mostly tech/circuit-
+  themed icons), isliye kuch icons (gear/settings, edit/pencil, trash/delete,
+  plus, back-arrow) ke liye LED version verify nahi ho paya hai — abhi
+  temporarily Dotty URLs pe hi hain (neeche "TODO(icon-rule)" comments dekho).
+  Jab bhi in ka LED version mile (ya Najeef confirm kare), replace kar dena.
+-->
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
@@ -1253,14 +1271,16 @@
     <span class="drawer-title">Chaman AI</span>
   </div>
   <button id="newChatBtn" class="new-chat-btn" type="button">
-    <img src="https://img.icons8.com/ios7/512w/plus--v1.png" alt="">
+    <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — plus icon ke liye LED URL confirm karke replace karo -->
+    <img src="https://img.icons8.com/dotty/96/plus-math.png" alt="">
     <span>Naya chat</span>
   </button>
   <div class="drawer-label">Sessions</div>
   <div id="sessionList" class="session-list"></div>
   <div class="drawer-footer">
     <button id="settingsBtn" class="drawer-footer-btn" type="button">
-      <img src="https://img.icons8.com/ios7/512w/settings--v1.png" alt="">
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — gear/settings icon ke liye LED URL confirm karke replace karo -->
+      <img src="https://img.icons8.com/dotty/96/gear.png" alt="">
       <span>Settings</span>
     </button>
   </div>
@@ -1272,7 +1292,8 @@
 <div id="settingsPage" class="settings-page">
   <div class="settings-header">
     <button id="settingsBackBtn" class="icon-btn" aria-label="Wapas jao" type="button">
-      <img src="https://img.icons8.com/ios7/512w/back--v1.png" alt="">
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — back icon ke liye LED URL confirm karke replace karo -->
+      <img src="https://img.icons8.com/dotty/80/return.png" alt="">
     </button>
     <span class="settings-title">Settings</span>
   </div>
@@ -1283,7 +1304,8 @@
         <span class="settings-row-title">Naam</span>
         <span class="settings-row-value" id="profileNameDisplay">—</span>
       </div>
-      <span class="settings-row-arrow"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span>
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span>
     </button>
 
     <div class="drawer-label" style="margin-top:18px;">Termux Bridge</div>
@@ -1292,7 +1314,8 @@
         <span class="settings-row-title">Status</span>
         <span class="settings-row-value" id="bridgeStatusDisplay">Disconnected</span>
       </div>
-      <span class="settings-row-arrow"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span>
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span>
     </button>
     <!-- Aage aur settings groups (jaise Appearance, Notifications, Data,
          About, etc.) yahin isi neeche add honge -->
@@ -1338,14 +1361,15 @@
 </main>
 
 <button id="jumpBtn" class="jump-bottom" type="button" aria-label="Neeche jao">
-  <img src="https://img.icons8.com/ios7/512w/long-arrow-down.png" alt="">
+  <img src="https://img.icons8.com/led/32/circled-chevron-down.png" alt="">
 </button>
 
 <form id="form">
   <div id="attachChips" class="attach-chips"></div>
   <div class="input-row">
     <button id="attachBtn" class="attach-btn" type="button" aria-label="File attach karo">
-      <img src="https://img.icons8.com/ios7/512w/plus--v1.png" alt="">
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — plus icon ke liye LED URL confirm karke replace karo -->
+      <img src="https://img.icons8.com/dotty/96/plus-math.png" alt="">
     </button>
     <input id="fileInput" type="file" multiple accept="*/*" style="display:none">
     <textarea id="input" rows="1" placeholder="Type kar..." autocomplete="off"></textarea>
@@ -1989,14 +2013,16 @@
       const renameBtn = document.createElement('button');
       renameBtn.type = 'button';
       renameBtn.className = 'app-modal-btn';
-      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span><span>Rename</span>';
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
+      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span><span>Rename</span>';
       renameBtn.addEventListener('click', () => showRenameModal(id));
       root.appendChild(renameBtn);
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'app-modal-btn danger';
-      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/ios7/512w/trash--v1.png" alt=""></span><span>Delete</span>';
+      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — trash icon ke liye LED URL confirm karke replace karo -->
+      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/dotty/96/filled-trash.png" alt=""></span><span>Delete</span>';
       delBtn.addEventListener('click', () => showDeleteModal(id));
       root.appendChild(delBtn);
     });
@@ -2106,7 +2132,7 @@
   // { iconUrl, iconAlt, label, handler } object push kar do, list khud-ba-khud ban jaayegi.
   const ATTACH_OPTIONS = [
     {
-      iconUrl: 'https://img.icons8.com/m_outlined/512w/add-file.png',
+      iconUrl: 'https://img.icons8.com/led/32/insert-page.png',
       iconAlt: 'Add file',
       label: 'File upload',
       handler: () => {
@@ -3205,6 +3231,11 @@
     csv: 'data', tsv: 'data', xlsx: 'data', xls: 'data',
     txt: 'doc', md: 'doc', pdf: 'doc', docx: 'doc',
   };
+  // TODO(icon-rule): ye custom hand-coded SVG hai, icons8 se nahi — poori app
+  // LED style follow karti hai, isliye chaaho to isko bhi
+  // https://img.icons8.com/led/{size}/insert-page.png jaisa LED <img> se
+  // replace kar sakte ho consistency ke liye. Abhi functionally sahi hai,
+  // sirf visual-consistency ka open item hai.
   function fileIconSvg() {
     // Generic document icon — rang category ke hisaab se CSS class decide karta hai.
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
