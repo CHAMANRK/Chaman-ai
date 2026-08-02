@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content">
+<title>Chaman AI</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12100e;
+    --ink-2:#1a1713;
+    --ink-3:#221e18;
+    --line:#332d24;
+    --paper:#ede7dd;
+    --paper-dim:#a89d8a;
+    --amber:#e8a33d;
+    --amber-dim:#8a6a30;
+    --sage:#7c9473;
+    --sage-dim:#3a4235;
+    --rust:#b24c2f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(ellipse 800px 500px at 15% -10%, rgba(232,163,61,0.07), transparent),
+      radial-gradient(ellipse 600px 400px at 100% 10%, rgba(124,148,115,0.06), transparent);
+    color:var(--paper);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh; /* mobile chrome address-bar ke saath sahi height */
+    overflow:hidden;
+  }
+
+  /* ── header ── */
+  header{
+    flex:0 0 auto;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:linear-gradient(180deg, var(--ink-2), transparent);
+    position:relative;
+    z-index:5;
+  }
+  .icon-btn{
+    all:unset;
+    width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .icon-btn:active{background:var(--ink-3);}
+  .icon-btn img{width:20px;height:20px;display:block;filter:invert(1);opacity:.9;}
+  .burger{display:flex;flex-direction:column;gap:4px;width:18px;}
+  .burger span{display:block;height:2px;width:100%;background:var(--paper);border-radius:1px;}
+
+  .chain{display:flex;gap:6px;align-items:center;}
+  .chain .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--line);
+    transition:background .3s, box-shadow .3s;
+  }
+  .chain .dot.live{
+    background:var(--amber);
+    box-shadow:0 0 8px rgba(232,163,61,0.7);
+  }
+
+  /* ── sessions drawer ── */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s;
+    z-index:20;
+  }
+  .overlay.open{opacity:1;pointer-events:auto;}
+
+  .drawer{
+    position:fixed;top:0;left:0;bottom:0;
+    width:78%;max-width:280px;
+    background:var(--ink-2);
+    border-right:1px solid var(--line);
+    transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:21;
+    display:flex;
+    flex-direction:column;
+    padding:18px 14px;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:2px 4px 16px;}
+  .drawer-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:18px;
+    color:var(--amber);
+    letter-spacing:-0.02em;
+  }
+  .new-chat-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    text-align:center;
+    padding:10px;
+    margin-bottom:16px;
+    border:1px solid var(--amber-dim);
+    border-radius:9px;
+    color:var(--amber);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .new-chat-btn img{width:16px;height:16px;display:block;filter:invert(1);opacity:.9;}
+  .new-chat-btn:active{background:rgba(232,163,61,0.08);}
+  .drawer-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:0 4px 8px;
+  }
+  .session-list{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .session-row{
+    display:flex;
+    align-items:center;
+    border-radius:8px;
+    border-left:2px solid transparent;
+  }
+  .session-row.active{
+    background:var(--ink-3);
+    border-left-color:var(--amber);
+  }
+  .session-item{
+    all:unset;
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    min-width:0;
+    padding:11px 10px;
+    border-radius:8px;
+    color:var(--paper-dim);
+    font-size:13.5px;
+    line-height:1.4;
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .session-row:active .session-item{background:var(--ink-3);}
+  .session-row.active .session-item{color:var(--paper);}
+  .session-item.pressing{background:var(--ink-3);}
+  .session-empty{
+    padding:10px;
+    color:var(--paper-dim);
+    font-size:12.5px;
+    font-style:italic;
+  }
+
+  /* ── drawer footer (settings entry point) ── */
+  .drawer-footer{
+    margin-top:auto;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+  }
+  .drawer-footer-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    padding:11px 10px;
+    border-radius:8px;
+    color:var(--paper-dim);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .drawer-footer-btn:active{background:var(--ink-3);}
+  .drawer-footer-btn img{width:18px;height:18px;display:block;flex:0 0 auto;filter:invert(1);opacity:.85;}
+
+  /* ── settings page (poori screen ki alag "page" — abhi sirf Profile,
+     aage aur bahut saare setting groups yahin isi list style mein add honge) ── */
+  .settings-page{
+    position:fixed;inset:0;
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:22;
+  }
+  .settings-page.open{transform:translateX(0);}
+  .settings-header{
+    flex:0 0 auto;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:linear-gradient(180deg, var(--ink-2), transparent);
+  }
+  .settings-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--paper);
+    letter-spacing:-0.01em;
+  }
+  .settings-body{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 14px;
+  }
+  .settings-row{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    padding:13px 12px;
+    border-radius:9px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    cursor:pointer;
+  }
+  .settings-row:active{background:var(--ink-3);}
+  .settings-row-main{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .settings-row-title{font-size:13px;color:var(--paper-dim);}
+  .settings-row-value{
+    font-size:14.5px;
+    color:var(--paper);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .settings-row-arrow{color:var(--paper-dim);font-size:14px;flex:0 0 auto;padding-left:10px;}
+  .settings-row-arrow img{width:16px;height:16px;display:block;filter:invert(1);opacity:.7;}
+
+  /* ── generic app modal (session actions, attach menu, etc.) ── */
+  .app-modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s;
+    z-index:40;
+  }
+  .app-modal-overlay.open{opacity:1;pointer-events:auto;}
+  .app-modal{
+    width:100%;
+    max-width:300px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    transform:scale(0.94) translateY(6px);
+    transition:transform .2s;
+    box-shadow:0 12px 32px rgba(0,0,0,0.45);
+  }
+  .app-modal-overlay.open .app-modal{transform:scale(1) translateY(0);}
+  .app-modal-title{
+    font-size:13px;
+    color:var(--paper-dim);
+    padding:2px 4px 12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    border-bottom:1px solid var(--line);
+    margin-bottom:8px;
+  }
+  .app-modal-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    width:100%;
+    padding:12px 10px;
+    border-radius:9px;
+    color:var(--paper);
+    font-size:14.5px;
+    cursor:pointer;
+  }
+  .app-modal-btn:active{background:var(--ink-3);}
+  .app-modal-btn .glyph{width:18px;text-align:center;font-size:15px;color:var(--paper-dim);}
+  .app-modal-btn .glyph img{width:18px;height:18px;display:block;filter:invert(1);opacity:.85;}
+  .app-modal-btn.danger{color:var(--rust);}
+  .app-modal-btn.danger .glyph{color:var(--rust);}
+  .app-modal-btn.danger .glyph img{filter:invert(29%) sepia(54%) saturate(1929%) hue-rotate(340deg) brightness(93%) contrast(94%);opacity:1;}
+  .app-modal-input{
+    all:unset;
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:9px;
+    color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;
+    padding:10px 12px;
+    margin-bottom:14px;
+  }
+  .app-modal-input:focus{outline:none;border-color:var(--amber-dim);}
+  .app-modal-text{
+    font-size:13.5px;
+    color:var(--paper-dim);
+    line-height:1.5;
+    padding:2px 2px 16px;
+  }
+  .app-modal-footer{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+  }
+  .app-modal-footer button{
+    all:unset;
+    box-sizing:border-box;
+    padding:9px 15px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    text-align:center;
+  }
+  .app-modal-footer .sm-cancel{color:var(--paper-dim);border:1px solid var(--line);}
+  .app-modal-footer .sm-cancel:active{background:var(--ink-3);}
+  .app-modal-footer .sm-confirm{color:var(--ink);background:var(--amber);font-weight:600;}
+  .app-modal-footer .sm-confirm:active{transform:scale(0.96);}
+  .app-modal-footer .sm-confirm.danger{background:var(--rust);color:#fff;}
+
+  /* ── chat area ── */
+  main{
+    flex:1 1 auto;
+    min-height:0; /* CRITICAL: without this, flex item won't shrink and pushes the form off-screen */
+    overflow-y:auto;
+    padding:22px 16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    scroll-behavior:smooth;
+  }
+  main::-webkit-scrollbar{width:0;}
+
+  .empty{
+    margin:auto;
+    text-align:center;
+    color:var(--paper-dim);
+    max-width:280px;
+  }
+  .empty .glyph-big{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 auto 10px;
+  }
+  .empty .glyph-big .empty-mark{
+    animation-duration:2.6s; /* idle state mein thoda slower/calmer pulse */
+  }
+  .empty p{font-size:13px;line-height:1.6;margin:0;}
+
+  .row{display:flex;max-width:100%;}
+  .row.user{justify-content:flex-end;}
+  .row.assistant{justify-content:flex-start;}
+
+  .bubble{
+    max-width:82%;
+    padding:11px 14px;
+    font-size:15px;
+    line-height:1.55;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+  }
+  .row.user .bubble{
+    background:var(--sage-dim);
+    border:1px solid rgba(124,148,115,0.35);
+    color:#dfe8db;
+    border-radius:14px 14px 3px 14px;
+  }
+  .row.assistant .bubble{
+    background:transparent;
+    border-left:2px solid var(--amber-dim);
+    padding-left:13px;
+    color:var(--paper);
+    border-radius:2px;
+    max-width:100%; /* .wrap already caps width at 82% — bubble should fill it fully, not re-shrink */
+  }
+  .bubble strong{color:var(--amber);font-weight:600;}
+  .bubble em{font-style:italic;color:#f3ead8;}
+  .bubble .inline-code{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.88em;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:1px 5px;
+    color:#f0c988;
+  }
+  .codeblock{
+    margin:8px 0;
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--ink-3);
+  }
+  .codeblock-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 10px;
+    background:var(--ink-2);
+    border-bottom:1px solid var(--line);
+  }
+  .codeblock-head .lang{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    text-transform:lowercase;
+    letter-spacing:0.03em;
+  }
+  .copy-btn{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:5px;
+    padding:3px 9px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .copy-btn:active{transform:scale(0.94);}
+  .copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
+  .codeblock pre{
+    margin:0;
+    padding:10px 12px;
+    overflow-x:auto;
+  }
+  .codeblock code{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    line-height:1.5;
+    color:#e6ddc9;
+    white-space:pre;
+  }
+  .md-p{margin:0 0 10px;}
+  .md-p:last-child{margin-bottom:0;}
+  .md-h{
+    font-family:'Space Grotesk',sans-serif;
+    color:var(--amber);
+    line-height:1.3;
+    margin:14px 0 8px;
+  }
+  .bubble > .md-h:first-child{margin-top:0;}
+  h1.md-h{font-size:19px;}
+  h2.md-h{font-size:17px;}
+  h3.md-h{font-size:15.5px;}
+  h4.md-h,h5.md-h,h6.md-h{font-size:14.5px;color:var(--paper);}
+  .md-list{
+    margin:0 0 10px;
+    padding-left:20px;
+  }
+  .md-list li{margin-bottom:4px;line-height:1.5;}
+  .md-list:last-child{margin-bottom:0;}
+  .md-table-wrap{
+    overflow-x:auto;
+    margin:8px 0 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .md-table{
+    border-collapse:collapse;
+    width:100%;
+    font-size:13.5px;
+  }
+  .md-table th,.md-table td{
+    padding:7px 11px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    white-space:nowrap;
+  }
+  .md-table th{
+    background:var(--ink-3);
+    color:var(--amber);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .md-table tr:last-child td{border-bottom:none;}
+  .md-table tr:nth-child(even) td{background:rgba(255,255,255,0.02);}
+  .meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--paper-dim);
+  }
+  .msg-footer{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+    padding-left:13px;
+  }
+  .msg-footer .meta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .msg-copy-btn{
+    all:unset;
+    box-sizing:border-box;
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:3px 8px;
+    cursor:pointer;
+    line-height:1;
+    transition:color .15s, border-color .15s;
+  }
+  .msg-copy-btn:active{transform:scale(0.94);}
+  .msg-copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
+  .row.assistant .wrap{display:flex;flex-direction:column;max-width:82%;}
+
+  .thinking{
+    display:flex;align-items:center;padding-left:13px;padding-top:2px;padding-bottom:2px;
+    border-left:2px solid var(--amber-dim);
+  }
+  .thinking .rs-mark{
+    display:block;
+    animation:rsBreathe 1.5s ease-in-out infinite;
+  }
+  @keyframes rsBreathe{
+    0%,100%{ transform:scale(1); filter:brightness(1) drop-shadow(0 0 2px rgba(232,163,61,.35)); }
+    50%{ transform:scale(1.14); filter:brightness(1.3) drop-shadow(0 0 8px rgba(232,163,61,.8)); }
+  }
+
+  /* ── live web search status ── */
+  .search-status{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding-left:13px;
+    padding-top:2px;padding-bottom:2px;
+    border-left:2px solid var(--amber-dim);
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    transition:border-color .25s, color .25s;
+  }
+  .search-status .glass{
+    display:inline-block;
+    font-size:14px;
+    animation:search-scan 1.1s ease-in-out infinite;
+    transform-origin:70% 70%;
+  }
+  @keyframes search-scan{
+    0%,100%{transform:rotate(-10deg) scale(1);}
+    50%{transform:rotate(10deg) scale(1.18);}
+  }
+  .search-status.found .glass,
+  .search-status.failed .glass{animation:none;}
+  .search-status .status-text .dots::after{
+    content:'';
+    display:inline-block;
+    width:1.2em;
+    text-align:left;
+    animation:search-dots 1.2s steps(4,end) infinite;
+  }
+  @keyframes search-dots{
+    0%{content:'';}
+    25%{content:'.';}
+    50%{content:'..';}
+    75%{content:'...';}
+    100%{content:'';}
+  }
+  .search-status .scan-bar{
+    position:relative;
+    width:46px;height:2px;
+    border-radius:2px;
+    background:var(--line);
+    overflow:hidden;
+    flex:0 0 auto;
+  }
+  .search-status .scan-bar::after{
+    content:'';
+    position:absolute;top:0;left:-40%;
+    width:40%;height:100%;
+    background:var(--amber);
+    border-radius:2px;
+    animation:scan-move 1s ease-in-out infinite;
+  }
+  .search-status.found .scan-bar::after{background:var(--sage);animation:none;left:0;width:100%;}
+  .search-status.failed .scan-bar::after{background:var(--rust);animation:none;left:0;width:100%;}
+  @keyframes scan-move{
+    0%{left:-40%;}
+    100%{left:100%;}
+  }
+  .search-status.found{border-left-color:var(--sage-dim);color:var(--sage);}
+  .search-status.failed{border-left-color:var(--rust);color:var(--rust);}
+
+  .err{color:var(--rust);}
+
+  /* ── typewriter cursor ── */
+  .bubble.typing::after{
+    content:'';
+    display:inline-block;
+    width:2px;
+    height:1em;
+    margin-left:2px;
+    background:var(--amber);
+    vertical-align:text-bottom;
+    animation:blink .8s step-end infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ── ask_user action: bottom-sheet card (neeche se slide-up, options
+     vertical list mein line-by-line — pehle wale inline circular pills
+     narrow mobile width pe overlap kar rahe the, isliye poora hata diya) ── */
+  .ask-user-backdrop{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:60;
+    opacity:0;
+    transition:opacity .25s ease;
+  }
+  .ask-user-backdrop.show{opacity:1;}
+  .ask-user-sheet{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:61;
+    background:var(--ink-2);
+    border-top:1px solid var(--line);
+    border-radius:20px 20px 0 0;
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+    max-height:70vh;
+    overflow-y:auto;
+    box-shadow:0 -8px 30px rgba(0,0,0,.4);
+  }
+  .ask-user-sheet.show{transform:translateY(0);}
+  .ask-user-sheet-handle{
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:999px;
+    margin:0 auto 14px;
+  }
+  .ask-user-sheet-q{
+    font-size:15px;
+    font-weight:600;
+    color:var(--paper);
+    margin-bottom:14px;
+  }
+  .ask-user-sheet-opts{
+    display:flex;
+    flex-direction:column;
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .ask-user-sheet-opt{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    width:100%;
+    padding:14px 16px;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--paper);
+    font:inherit;
+    font-size:14.5px;
+    text-align:left;
+    cursor:pointer;
+  }
+  .ask-user-sheet-opt:last-child{border-bottom:none;}
+  .ask-user-sheet-opt:active{background:var(--ink-3);}
+  .ask-user-sheet-opt.selected{color:var(--amber); font-weight:600;}
+  .ask-user-sheet-opt .chk{
+    width:18px; height:18px;
+    border-radius:50%;
+    border:1.5px solid var(--paper-dim);
+    flex:0 0 auto;
+  }
+  .ask-user-sheet-opt .chk.sq{border-radius:4px;}
+  .ask-user-sheet-opt.selected .chk{border-color:var(--amber); background:var(--amber);}
+  .ask-user-sheet-confirm{
+    display:block;
+    width:100%;
+    margin-top:14px;
+    padding:13px;
+    border-radius:12px;
+    border:none;
+    background:var(--amber);
+    color:var(--ink);
+    font:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .ask-user-sheet-confirm:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* Sheet band hone ke baad chat ke andar chhota "jawab" summary reh jaata hai */
+  .ask-user-answered{
+    margin-top:8px;
+    padding-top:10px;
+    border-top:1px dashed var(--amber-dim);
+    font-size:13px;
+    color:var(--amber-dim);
+  }
+  .ask-user-answered b{color:var(--amber);}
+
+  /* ── jump-to-bottom button (jab user upar scroll kare tab dikhta hai) ── */
+  .jump-bottom{
+    position:fixed;
+    right:16px;
+    bottom:calc(78px + env(safe-area-inset-bottom));
+    width:38px;height:38px;
+    border-radius:50%;
+    border:1px solid var(--amber-dim);
+    background:var(--ink-2);
+    color:var(--amber);
+    font-size:16px;
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    opacity:0;
+    transform:translateY(8px);
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+    z-index:6;
+  }
+  .jump-bottom.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .jump-bottom:active{transform:scale(0.92);}
+  .jump-bottom img{width:18px;height:18px;display:block;filter:invert(1);opacity:.9;}
+
+  /* ── input bar ── */
+  form{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+    background:var(--ink-2);
+    border-top:1px solid var(--line);
+  }
+  .input-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .attach-btn{
+    all:unset;
+    box-sizing:border-box;
+    flex:0 0 auto;
+    width:44px;height:44px;
+    border-radius:11px;
+    border:1.5px solid var(--amber-dim);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .attach-btn:active{background:rgba(232,163,61,0.12);transform:scale(0.94);}
+  .attach-btn{color:var(--amber);}
+  .attach-btn img{width:22px;height:22px;display:block;filter:invert(1);opacity:.9;}
+
+  /* ── attached-file chips (input ke upar dikhte hain, send se pehle) ── */
+  .attach-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .attach-chips.has-files{margin-bottom:9px;}
+  .attach-chip{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    max-width:170px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:5px 6px 5px 10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--paper-dim);
+  }
+  .attach-chip.reading{border-color:var(--amber-dim);}
+  .attach-chip.reading .chip-name{animation:chipPulse 1.1s ease-in-out infinite;}
+  @keyframes chipPulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .attach-chip.unsupported{border-color:var(--rust);}
+  .attach-chip .chip-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--paper);
+  }
+  .attach-chip .chip-remove{
+    all:unset;
+    box-sizing:border-box;
+    position:relative;
+    flex:0 0 auto;
+    width:18px;height:18px;
+    cursor:pointer;
+  }
+  .attach-chip .chip-remove::before,
+  .attach-chip .chip-remove::after{
+    content:'';
+    position:absolute;
+    left:3px;right:3px;
+    top:8px;
+    height:1.5px;
+    background:var(--paper-dim);
+    border-radius:1px;
+  }
+  .attach-chip .chip-remove::before{transform:rotate(45deg);}
+  .attach-chip .chip-remove::after{transform:rotate(-45deg);}
+  .attach-chip .chip-remove:active::before,
+  .attach-chip .chip-remove:active::after{background:var(--rust);}
+
+  /* ── output files produced by the Python sandbox (download chips) ── */
+  .output-files{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+  }
+  .output-file-chip{
+    all:unset;
+    box-sizing:border-box;
+    display:inline-flex;
+    align-items:center;
+    max-width:200px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    background:var(--sage-dim);
+    border:1px solid var(--sage);
+    border-radius:8px;
+    padding:6px 10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--sage);
+    cursor:pointer;
+  }
+  .output-file-chip:active{background:var(--sage);color:var(--ink);}
+
+  /* ── attached-file tags shown inside a sent user bubble ── */
+  .msg-files{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:7px;
+  }
+  .msg-file-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:7px;
+    padding:4px 9px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#dfe8db;
+  }
+
+  textarea{
+    flex:1;
+    resize:none;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    max-height:110px;
+    line-height:1.4;
+  }
+  textarea:focus{outline:none;border-color:var(--amber-dim);}
+  textarea::placeholder{color:var(--paper-dim);}
+
+  button{
+    flex:0 0 auto;
+    width:42px;height:42px;
+    border-radius:10px;
+    border:1px solid var(--amber-dim);
+    background:var(--amber);
+    color:var(--ink);
+    font-size:17px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button:active:not(:disabled){transform:scale(0.94);}
+  #send img{width:20px;height:20px;display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <button id="menuBtn" class="icon-btn" aria-label="Menu" type="button">
+    <span class="burger"><span></span><span></span><span></span></span>
+  </button>
+  <div class="chain" id="chain">
+    <div class="dot" data-provider="Groq"></div>
+    <div class="dot" data-provider="OpenRouter"></div>
+    <div class="dot" data-provider="Cerebras"></div>
+    <div class="dot" data-provider="Mistral"></div>
+  </div>
+</header>
+
+<div id="overlay" class="overlay"></div>
+
+<aside id="drawer" class="drawer">
+  <div class="drawer-head">
+    <span class="drawer-title">Chaman AI</span>
+  </div>
+  <button id="newChatBtn" class="new-chat-btn" type="button">
+    <img src="https://img.icons8.com/ios7/512w/plus--v1.png" alt="">
+    <span>Naya chat</span>
+  </button>
+  <div class="drawer-label">Sessions</div>
+  <div id="sessionList" class="session-list"></div>
+  <div class="drawer-footer">
+    <button id="settingsBtn" class="drawer-footer-btn" type="button">
+      <img src="https://img.icons8.com/ios7/512w/settings--v1.png" alt="">
+      <span>Settings</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ── Settings page — alag full "page" jaisa dikhta hai. Abhi sirf Profile
+     hai; aage jitne bhi naye settings groups aayenge, sab .settings-body
+     ke andar isi list style mein add honge. ── -->
+<div id="settingsPage" class="settings-page">
+  <div class="settings-header">
+    <button id="settingsBackBtn" class="icon-btn" aria-label="Wapas jao" type="button">
+      <img src="https://img.icons8.com/ios7/512w/back--v1.png" alt="">
+    </button>
+    <span class="settings-title">Settings</span>
+  </div>
+  <div class="settings-body">
+    <div class="drawer-label">Profile</div>
+    <button type="button" id="profileRow" class="settings-row">
+      <div class="settings-row-main">
+        <span class="settings-row-title">Naam</span>
+        <span class="settings-row-value" id="profileNameDisplay">—</span>
+      </div>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span>
+    </button>
+    <!-- Aage aur settings groups (jaise Appearance, Notifications, Data,
+         About, etc.) yahin isi neeche add honge -->
+  </div>
+</div>
+
+<div id="profileModalOverlay" class="app-modal-overlay">
+  <div id="profileModal" class="app-modal"></div>
+</div>
+
+<!-- ── Onboarding: pehli baar (naya user / naya localStorage) URL se site
+     khulte hi ye zabardasti dikhta hai jab tak naam save na ho jaaye —
+     isliye ismein "outside click se band ho jaaye" wala behavior jaan-boojh
+     kar nahi diya (dusre app-modal-overlay ki tarah makeModal se nahi
+     banaya), aur koi Cancel button bhi nahi hai. ── -->
+<div id="onboardOverlay" class="app-modal-overlay">
+  <div class="app-modal" id="onboardModal">
+    <div class="app-modal-title">Chaman AI mein swagat hai 👋</div>
+    <div class="app-modal-text">Shuru karne se pehle, tera naam kya hai?</div>
+    <input type="text" id="onboardNameInput" class="app-modal-input" placeholder="Apna naam likho" maxlength="40" autocomplete="off">
+    <div class="app-modal-footer">
+      <button type="button" class="sm-confirm" id="onboardSaveBtn">Shuru karein</button>
+    </div>
+  </div>
+</div>
+
+<div id="sessionModalOverlay" class="app-modal-overlay">
+  <div id="sessionModal" class="app-modal"></div>
+</div>
+
+<div id="attachModalOverlay" class="app-modal-overlay">
+  <div id="attachModal" class="app-modal"></div>
+</div>
+
+<main id="main">
+  <div class="empty" id="empty">
+    <div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="56" height="56" alt="Chaman AI"></div>
+  </div>
+</main>
+
+<button id="jumpBtn" class="jump-bottom" type="button" aria-label="Neeche jao">
+  <img src="https://img.icons8.com/ios7/512w/long-arrow-down.png" alt="">
+</button>
+
+<form id="form">
+  <div id="attachChips" class="attach-chips"></div>
+  <div class="input-row">
+    <button id="attachBtn" class="attach-btn" type="button" aria-label="File attach karo">
+      <img src="https://img.icons8.com/ios7/512w/plus--v1.png" alt="">
+    </button>
+    <input id="fileInput" type="file" multiple accept="*/*" style="display:none">
+    <textarea id="input" rows="1" placeholder="Type kar..." autocomplete="off"></textarea>
+    <button id="send" type="submit">
+      <img src="https://img.icons8.com/led/32/sent.png" alt="Send" width="20" height="20">
+    </button>
+  </div>
+</form>
+
+<script>
+  const $main = document.getElementById('main');
+  const $form = document.getElementById('form');
+  const $input = document.getElementById('input');
+  const $send = document.getElementById('send');
+  const $dots = document.querySelectorAll('.chain .dot');
+  const $menuBtn = document.getElementById('menuBtn');
+  const $overlay = document.getElementById('overlay');
+  const $drawer = document.getElementById('drawer');
+  const $newChatBtn = document.getElementById('newChatBtn');
+  const $sessionList = document.getElementById('sessionList');
+  const $jumpBtn = document.getElementById('jumpBtn');
+  const $sessionModalOverlay = document.getElementById('sessionModalOverlay');
+  const $sessionModal = document.getElementById('sessionModal');
+  const $attachModalOverlay = document.getElementById('attachModalOverlay');
+  const $attachModal = document.getElementById('attachModal');
+  const $attachBtn = document.getElementById('attachBtn');
+  const $fileInput = document.getElementById('fileInput');
+  const $attachChips = document.getElementById('attachChips');
+  const $settingsBtn = document.getElementById('settingsBtn');
+  const $settingsPage = document.getElementById('settingsPage');
+  const $settingsBackBtn = document.getElementById('settingsBackBtn');
+  const $profileRow = document.getElementById('profileRow');
+  const $profileNameDisplay = document.getElementById('profileNameDisplay');
+  const $profileModalOverlay = document.getElementById('profileModalOverlay');
+  const $profileModal = document.getElementById('profileModal');
+  const $onboardOverlay = document.getElementById('onboardOverlay');
+  const $onboardNameInput = document.getElementById('onboardNameInput');
+  const $onboardSaveBtn = document.getElementById('onboardSaveBtn');
+
+  let history = []; // {role, content, provider?, model?} — current session ki poori raw chat
+  let busy = false;
+  let activeSessionId = null; // null = abhi tak koi reply nahi aaya, session bana hi nahi
+
+  // "Stick to bottom" — jab tak user khud upar scroll na kare, naya content
+  // aane par hum neeche pin karte rehte hain. Jaise hi user upar scroll karta
+  // hai, hum peeche hat jaate hain aur usse manually padhne dete hain — chahe
+  // AI abhi bhi lamba jawab generate kar raha ho. Jump button se wapas neeche ja sakta hai.
+  let stickToBottom = true;
+  // Jab tak user ki ungli/pointer screen par hai (touch ho ya drag), hum
+  // scrollTop ko kabhi force se set nahi karte — chahe kitni bhi baar
+  // scrollBottom() call ho (jaise typewriter ke har character pe). Pehle
+  // sirf touchmove ke baad stickToBottom false hoti thi, lekin agar typing
+  // ke time JS thoda busy ho (bahut saare textContent updates), to touchmove
+  // handler late fire hota tha aur beech mein forced scrollTop assignments
+  // gesture ko "cancel" kar dete the — isse upar scroll karna bahut mushkil
+  // lagta tha. Ab touchstart hote hi (movement se pehle hi) forced-scroll
+  // turant band ho jaata hai.
+  let touching = false;
+
+  const SESSIONS_KEY = 'chamanai_sessions_v1';
+  const PROFILE_KEY = 'chamanai_profile_v1'; // { name: "..." } — aage isi object mein aur fields (jaise avatar, preferences) add ho sakte hain
+
+  function loadProfile() {
+    try {
+      return JSON.parse(localStorage.getItem(PROFILE_KEY)) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveProfile(profile) {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch (e) {
+      console.warn('Profile save fail:', e);
+    }
+  }
+
+  function loadSessions() {
+    try {
+      return JSON.parse(localStorage.getItem(SESSIONS_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function isQuotaError(e) {
+    return !!e && (
+      e.name === 'QuotaExceededError' ||
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      e.code === 22 ||
+      e.code === 1014
+    );
+  }
+
+  // Sabse purana session hata deta hai — current active session ko (agar possible ho)
+  // bacha ke rakhta hai, kyunki wahi abhi save ho raha hota hai.
+  function dropOldestSession(sessions) {
+    if (sessions.length <= 1) return sessions.slice(0, 0); // ek hi bacha tha, use bhi hata do
+    const sorted = [...sessions].sort((a, b) => a.updatedAt - b.updatedAt);
+    const victim = sorted.find(s => s.id !== activeSessionId) || sorted[0];
+    return sessions.filter(s => s.id !== victim.id);
+  }
+
+  // Storage full hone par purani sessions ko aahiste-aahiste (ek-ek karke) hata ke
+  // retry karta hai, jab tak naya data fit na ho jaaye ya sessions khatam na ho jaayein.
+  function saveSessions(sessions) {
+    let list = sessions;
+    while (true) {
+      try {
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(list));
+        return;
+      } catch (e) {
+        if (!isQuotaError(e) || list.length === 0) {
+          console.warn('localStorage save fail:', e);
+          return;
+        }
+        list = dropOldestSession(list);
+      }
+    }
+  }
+
+  function sessionTitle(firstUserMsg) {
+    const t = firstUserMsg.trim().replace(/\s+/g, ' ');
+    return t.length > 42 ? t.slice(0, 42) + '…' : t;
+  }
+
+  // Session sirf tab banta hai jab pehla reply successfully aa jaaye — usse pehle
+  // koi entry sidebar mein nahi dikhti, jaisa maanga gaya tha.
+  function persistTurn() {
+    const sessions = loadSessions();
+    if (activeSessionId) {
+      const s = sessions.find(s => s.id === activeSessionId);
+      if (s) {
+        s.messages = history;
+        s.updatedAt = Date.now();
+      }
+    } else {
+      const firstUser = history.find(m => m.role === 'user');
+      const firstUserMsg = (firstUser && (firstUser.displayText || (firstUser.files && firstUser.files.length ? `File: ${firstUser.files[0].name}` : firstUser.content))) || 'New chat';
+      activeSessionId = String(Date.now());
+      sessions.unshift({
+        id: activeSessionId,
+        title: sessionTitle(firstUserMsg),
+        messages: history,
+        updatedAt: Date.now(),
+      });
+    }
+    saveSessions(sessions);
+    renderSessionList();
+  }
+
+  function renderSessionList() {
+    const sessions = loadSessions().sort((a, b) => b.updatedAt - a.updatedAt);
+    $sessionList.innerHTML = '';
+    if (!sessions.length) {
+      $sessionList.innerHTML = '<div class="session-empty">Abhi koi session nahi — pehla message bhejo.</div>';
+      return;
+    }
+    for (const s of sessions) {
+      const row = document.createElement('div');
+      row.className = 'session-row' + (s.id === activeSessionId ? ' active' : '');
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'session-item';
+      btn.textContent = s.title;
+      attachLongPress(btn, s.id);
+      row.appendChild(btn);
+
+      $sessionList.appendChild(row);
+    }
+  }
+
+  // ── Long-press (300ms) session actions ─────────────────────────────
+  // Ek chhota hold (~300ms) modal khol deta hai jisme Rename/Delete hote
+  // hain — koi icon session row mein hamesha nahi dikhta. Halka sa drag/scroll
+  // ho jaaye to press cancel ho jaata hai (taaki list scroll karna na tootey),
+  // aur ek normal quick tap session ko open karta hai jaisa pehle hota tha.
+  const LONG_PRESS_MS = 300;
+  const LONG_PRESS_MOVE_TOLERANCE = 8;
+
+  function attachLongPress(el, sessionId) {
+    let timer = null;
+    let startX = 0, startY = 0;
+    let fired = false;
+
+    function clear() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      el.classList.remove('pressing');
+    }
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      fired = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      timer = setTimeout(() => {
+        fired = true;
+        el.classList.remove('pressing');
+        if (navigator.vibrate) navigator.vibrate(12);
+        openSessionMenu(sessionId);
+      }, LONG_PRESS_MS);
+      el.classList.add('pressing');
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!timer) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) clear();
+    });
+
+    el.addEventListener('pointerup', clear);
+    el.addEventListener('pointercancel', clear);
+    el.addEventListener('pointerleave', clear);
+
+    el.addEventListener('click', (e) => {
+      if (fired) {
+        // Long-press ne modal khol diya tha — isse ek normal click ki tarah
+        // treat mat karo (session open nahi karna).
+        e.preventDefault();
+        e.stopPropagation();
+        fired = false;
+        return;
+      }
+      openSession(sessionId);
+    });
+  }
+
+  // ── Generic app modal factory ───────────────────────────────────────
+  // Ek hi reusable modal system — session-actions aur attach-menu dono
+  // isi se banate hain. Naya modal chahiye ho to bas makeModal(overlay, card)
+  // se ek instance bana lo, aur .open(builder) / .close() use karo.
+  function makeModal(overlayEl, cardEl) {
+    function close() { overlayEl.classList.remove('open'); }
+    overlayEl.addEventListener('click', (e) => {
+      if (e.target === overlayEl) close();
+    });
+    return {
+      open(contentBuilder) {
+        cardEl.innerHTML = '';
+        contentBuilder(cardEl);
+        overlayEl.classList.add('open');
+      },
+      close,
+    };
+  }
+  const sessionModal = makeModal($sessionModalOverlay, $sessionModal);
+  const attachModal = makeModal($attachModalOverlay, $attachModal);
+  const profileModal = makeModal($profileModalOverlay, $profileModal);
+
+  // ── Settings page ───────────────────────────────────────────────────
+  function updateProfileDisplay() {
+    const profile = loadProfile();
+    $profileNameDisplay.textContent = (profile && profile.name) ? profile.name : 'Naam set nahi hai';
+  }
+
+  function openSettings() {
+    updateProfileDisplay();
+    closeDrawer();
+    $settingsPage.classList.add('open');
+  }
+  function closeSettings() {
+    $settingsPage.classList.remove('open');
+  }
+  $settingsBtn.addEventListener('click', openSettings);
+  $settingsBackBtn.addEventListener('click', closeSettings);
+
+  function showProfileEditModal() {
+    const profile = loadProfile() || {};
+    profileModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Naam edit karo';
+      root.appendChild(title);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'app-modal-input';
+      input.value = profile.name || '';
+      input.maxLength = 40;
+      root.appendChild(input);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', profileModal.close);
+      footer.appendChild(cancelBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'sm-confirm';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const trimmed = input.value.trim();
+        if (trimmed) {
+          saveProfile({ ...profile, name: trimmed });
+          updateProfileDisplay();
+        }
+        profileModal.close();
+      });
+      footer.appendChild(saveBtn);
+
+      root.appendChild(footer);
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+  $profileRow.addEventListener('click', showProfileEditModal);
+
+  // ── Onboarding (naya user) ──────────────────────────────────────────
+  // Jab tak localStorage mein profile.name save nahi hai, ye overlay zabardasti
+  // dikhta hai (outside-click se band nahi hota, koi Cancel nahi hai).
+  function showOnboardIfNeeded() {
+    const profile = loadProfile();
+    if (profile && profile.name) return;
+    $onboardOverlay.classList.add('open');
+    setTimeout(() => $onboardNameInput.focus(), 100);
+  }
+  function submitOnboardName() {
+    const name = $onboardNameInput.value.trim();
+    if (!name) { $onboardNameInput.focus(); return; }
+    saveProfile({ ...(loadProfile() || {}), name });
+    $onboardOverlay.classList.remove('open');
+    updateProfileDisplay();
+  }
+  $onboardSaveBtn.addEventListener('click', submitOnboardName);
+  $onboardNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitOnboardName(); }
+  });
+
+  function openSessionMenu(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = s.title;
+      root.appendChild(title);
+
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'app-modal-btn';
+      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/ios7/512w/edit--v1.png" alt=""></span><span>Rename</span>';
+      renameBtn.addEventListener('click', () => showRenameModal(id));
+      root.appendChild(renameBtn);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'app-modal-btn danger';
+      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/ios7/512w/trash--v1.png" alt=""></span><span>Delete</span>';
+      delBtn.addEventListener('click', () => showDeleteModal(id));
+      root.appendChild(delBtn);
+    });
+  }
+
+  function showRenameModal(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Session rename karo';
+      root.appendChild(title);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'app-modal-input';
+      input.value = s.title;
+      input.maxLength = 80;
+      root.appendChild(input);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', sessionModal.close);
+      footer.appendChild(cancelBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'sm-confirm';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const trimmed = input.value.trim();
+        if (trimmed) {
+          const all = loadSessions();
+          const target = all.find(x => x.id === id);
+          if (target) {
+            target.title = sessionTitle(trimmed);
+            saveSessions(all);
+            renderSessionList();
+          }
+        }
+        sessionModal.close();
+      });
+      footer.appendChild(saveBtn);
+
+      root.appendChild(footer);
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+
+  function showDeleteModal(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Session delete karo';
+      root.appendChild(title);
+
+      const text = document.createElement('div');
+      text.className = 'app-modal-text';
+      text.textContent = `"${s.title}" delete karna hai? Ye wapas nahi aayega.`;
+      root.appendChild(text);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', sessionModal.close);
+      footer.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'sm-confirm danger';
+      confirmBtn.textContent = 'Delete';
+      confirmBtn.addEventListener('click', () => {
+        const all = loadSessions();
+        saveSessions(all.filter(x => x.id !== id));
+        sessionModal.close();
+        if (id === activeSessionId) {
+          startNewChat();
+        } else {
+          renderSessionList();
+        }
+      });
+      footer.appendChild(confirmBtn);
+
+      root.appendChild(footer);
+    });
+  }
+
+  // ── Attach menu (+ button) ──────────────────────────────────────────
+  // Registry pattern — abhi sirf "File upload" hai, aage koi aur source
+  // (camera, Drive, link, etc.) add karna ho to bas ek naya
+  // { iconUrl, iconAlt, label, handler } object push kar do, list khud-ba-khud ban jaayegi.
+  const ATTACH_OPTIONS = [
+    {
+      iconUrl: 'https://img.icons8.com/m_outlined/512w/add-file.png',
+      iconAlt: 'Add file',
+      label: 'File upload',
+      handler: () => {
+        attachModal.close();
+        $fileInput.click();
+      },
+    },
+    // Aage naye options yahan add karo.
+  ];
+
+  function openAttachMenu() {
+    attachModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Add karo';
+      root.appendChild(title);
+
+      ATTACH_OPTIONS.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'app-modal-btn';
+
+        const glyph = document.createElement('span');
+        glyph.className = 'glyph';
+        const img = document.createElement('img');
+        img.src = opt.iconUrl;
+        img.alt = opt.iconAlt || '';
+        glyph.appendChild(img);
+        btn.appendChild(glyph);
+
+        const label = document.createElement('span');
+        label.textContent = opt.label;
+        btn.appendChild(label);
+
+        btn.addEventListener('click', opt.handler);
+        root.appendChild(btn);
+      });
+    });
+  }
+
+  $attachBtn.addEventListener('click', openAttachMenu);
+
+  // ── File attachments ────────────────────────────────────────────────
+  // Har tarah ki file select ki ja sakti hai (koi type restriction nahi).
+  // Text/code files poori tarah padh ke content model ko bhej dete hain.
+  // PDF se text nikaalne ke liye pdf.js lazily load hota hai (pehli baar
+  // koi PDF attach hone par). Baaki (image, docx, zip, etc.) files sirf
+  // naam ke saath "attached" note ke roop mein bhejte hain — inka content
+  // parse nahi hota, aur model ko ye saaf bataya jaata hai (koi fake
+  // extraction nahi dikhaate).
+  let attachedFiles = []; // {id, name, size, kind, content, truncated, status}
+  const MAX_FILES = 5;
+  const MAX_CHARS_PER_FILE = 20000;
+  const TEXT_EXTENSIONS = new Set([
+    'txt','md','markdown','js','jsx','ts','tsx','py','java','c','cc','cpp','h','hpp',
+    'cs','go','rb','php','html','htm','css','scss','less','json','yml','yaml','xml',
+    'csv','tsv','sh','bash','zsh','sql','rs','swift','kt','kts','vue','svelte','ini',
+    'conf','cfg','env','log','toml','gradle','dockerfile','makefile','r','lua','pl',
+  ]);
+
+  function extOf(name) {
+    const i = name.lastIndexOf('.');
+    return i === -1 ? '' : name.slice(i + 1).toLowerCase();
+  }
+
+  function fileKind(file) {
+    const ext = extOf(file.name);
+    if (file.type === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (file.type.startsWith('text/') || file.type === 'application/json' || TEXT_EXTENSIONS.has(ext)) return 'text';
+    return 'unsupported';
+  }
+
+  $fileInput.addEventListener('change', () => {
+    const files = Array.from($fileInput.files || []);
+    $fileInput.value = ''; // reset karo taaki same file dubara select ho sake
+    for (const file of files) {
+      if (attachedFiles.length >= MAX_FILES) break;
+      addAttachedFile(file);
+    }
+  });
+
+  function addAttachedFile(file) {
+    const id = 'f' + Date.now() + Math.random().toString(36).slice(2, 7);
+    const kind = fileKind(file);
+    const entry = {
+      id, name: file.name, size: file.size, kind,
+      content: null, truncated: false,
+      status: kind === 'unsupported' ? 'unsupported' : 'reading',
+    };
+    attachedFiles.push(entry);
+    renderAttachChips();
+
+    if (kind === 'text') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        let text = String(reader.result || '');
+        if (text.length > MAX_CHARS_PER_FILE) {
+          text = text.slice(0, MAX_CHARS_PER_FILE);
+          entry.truncated = true;
+        }
+        entry.content = text;
+        entry.status = 'ready';
+        renderAttachChips();
+      };
+      reader.onerror = () => { entry.status = 'error'; renderAttachChips(); };
+      reader.readAsText(file);
+    } else if (kind === 'pdf') {
+      readPdfFile(file, entry);
+    } else {
+      renderAttachChips();
+    }
+  }
+
+  let pdfJsLoadPromise = null;
+  function ensurePdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (pdfJsLoadPromise) return pdfJsLoadPromise;
+    pdfJsLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      script.onerror = () => reject(new Error('pdf.js load fail hua'));
+      document.head.appendChild(script);
+    });
+    return pdfJsLoadPromise;
+  }
+
+  async function readPdfFile(file, entry) {
+    try {
+      await ensurePdfJs();
+      const buf = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+      let text = '';
+      const maxPages = Math.min(pdf.numPages, 30);
+      for (let p = 1; p <= maxPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        text += content.items.map((it) => it.str).join(' ') + '\n';
+        if (text.length > MAX_CHARS_PER_FILE) break;
+      }
+      const truncated = text.length > MAX_CHARS_PER_FILE || pdf.numPages > maxPages;
+      if (text.length > MAX_CHARS_PER_FILE) text = text.slice(0, MAX_CHARS_PER_FILE);
+      text = text.trim();
+      entry.content = text || null;
+      entry.truncated = truncated;
+      entry.status = text ? 'ready' : 'unsupported';
+    } catch (e) {
+      entry.status = 'error';
+    }
+    renderAttachChips();
+  }
+
+  // Attach ki gayi text/pdf files jaise hi "ready" (content extract ho chuka)
+  // ho jaati hain, unhe sandboxFiles map mein bhi copy kar dete hain — taaki
+  // Python code isi conversation mein unhe filename se open() kar sake.
+  // (sandboxFiles poore declaration ke liye neeche "Python Sandbox" section dekho.)
+  function syncSandboxFilesFromAttached() {
+    if (typeof sandboxFiles === 'undefined') return; // load-order safety
+    for (const f of attachedFiles) {
+      if (f.status === 'ready' && typeof f.content === 'string') {
+        sandboxFiles[f.name] = f.content;
+      }
+    }
+  }
+
+  function removeAttachedFile(id) {
+    attachedFiles = attachedFiles.filter((f) => f.id !== id);
+    renderAttachChips();
+  }
+
+  function renderAttachChips() {
+    syncSandboxFilesFromAttached();
+    $attachChips.innerHTML = '';
+    $attachChips.classList.toggle('has-files', attachedFiles.length > 0);
+    for (const f of attachedFiles) {
+      const chip = document.createElement('div');
+      chip.className = 'attach-chip' +
+        (f.status === 'reading' ? ' reading' : '') +
+        (f.status === 'unsupported' || f.status === 'error' ? ' unsupported' : '');
+
+      const name = document.createElement('span');
+      name.className = 'chip-name';
+      name.textContent = f.name;
+      chip.appendChild(name);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'chip-remove';
+      remove.setAttribute('aria-label', 'File hatao');
+      remove.addEventListener('click', () => removeAttachedFile(f.id));
+      chip.appendChild(remove);
+
+      $attachChips.appendChild(chip);
+    }
+  }
+
+  // History/backend ke liye poora text banata hai — attached files ka content
+  // (ya "content nahi mila" note) pehle, phir user ka typed message.
+  function buildOutgoingMessage(text, files) {
+    if (!files.length) return text;
+    const parts = files.map((f) => {
+      if (f.status === 'ready' && f.content) {
+        const ext = extOf(f.name);
+        const note = f.truncated ? '\n... (file lambi thi, truncate ki gayi)' : '';
+        return `[Attached file: ${f.name}]\n\`\`\`${ext}\n${f.content}${note}\n\`\`\``;
+      }
+      return `[Attached file: ${f.name} — content extract nahi ho saka (unsupported type ya error), sirf naam pata hai]`;
+    });
+    const filesBlock = parts.join('\n\n');
+    return text ? `${filesBlock}\n\n${text}` : filesBlock;
+  }
+
+  function clearMain() {
+    $main.innerHTML = `<div class="empty" id="empty"><div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="56" height="56" alt="Chaman AI"></div></div>`;
+  }
+
+  function openSession(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+    activeSessionId = id;
+    history = s.messages;
+    stickToBottom = true;
+    sandboxFiles = {}; // purani session ki attached files ka content persist nahi hota, isliye fresh
+    clearMain();
+    for (const msg of history) {
+      if (msg.role === 'user') {
+        addUserBubble(msg.displayText != null ? msg.displayText : msg.content, msg.files);
+      } else if (msg.role === 'assistant') {
+        addAssistantBubble(msg.content, msg.provider ? `${msg.provider} · ${msg.model || ''}` : null, false, false);
+      }
+    }
+    const last = history[history.length - 1];
+    lightDot(last && last.provider ? last.provider : null);
+    renderSessionList();
+    closeDrawer();
+    scrollBottom(true);
+  }
+
+  function startNewChat() {
+    activeSessionId = null;
+    history = [];
+    stickToBottom = true;
+    sandboxFiles = {};
+    clearMain();
+    lightDot(null);
+    renderSessionList();
+    closeDrawer();
+    updateJumpBtn();
+    $input.focus();
+  }
+
+  function openDrawer() {
+    $drawer.classList.add('open');
+    $overlay.classList.add('open');
+  }
+  function closeDrawer() {
+    $drawer.classList.remove('open');
+    $overlay.classList.remove('open');
+  }
+
+  $menuBtn.addEventListener('click', openDrawer);
+  $overlay.addEventListener('click', closeDrawer);
+  $newChatBtn.addEventListener('click', startNewChat);
+
+  // App load pe: hamesha ek fresh/naya session shuru hota hai. Purani sessions
+  // localStorage mein save rehti hain aur drawer mein dikhti hain — bas auto-resume
+  // nahi hoti, user manually tap karke khol sakta hai.
+  (function init() {
+    renderSessionList();
+    history = [];
+    activeSessionId = null;
+    lightDot(null);
+    updateProfileDisplay();
+    showOnboardIfNeeded();
+  })();
+
+  $input.addEventListener('input', () => {
+    $input.style.height = 'auto';
+    $input.style.height = Math.min($input.scrollHeight, 110) + 'px';
+  });
+
+  // Sirf actual character-entry / edit keys pe tick bajaye — modifier
+  // combos (Ctrl+C, Cmd+V, etc.) ya arrow/nav keys pe nahi.
+  $input.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter') {
+      SoundFX.userTick();
+    }
+  });
+
+  $input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      $form.requestSubmit();
+    }
+  });
+
+  // Keyboard khulne pe kuch Android browsers `interactive-widget=resizes-content`
+  // ko ignore karke poore page ko scroll kar dete hain (isse messages "upar" chale
+  // jaate hain jab tak khud scroll na karo). visualViewport API se hum body ki
+  // height ko keyboard ke hisaab se manually sync karte hain, aur input focus hote
+  // hi neeche pin kar dete hain — taaki chat aur input box hamesha visible rahein.
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    function syncViewportHeight() {
+      document.body.style.height = vv.height + 'px';
+      window.scrollTo(0, 0);
+      scrollBottom(true);
+    }
+    vv.addEventListener('resize', syncViewportHeight);
+    vv.addEventListener('scroll', () => window.scrollTo(0, 0));
+  }
+  $input.addEventListener('focus', () => {
+    // Keyboard animate hote hue thoda time leta hai — chhota delay ke baad pin karo.
+    setTimeout(() => scrollBottom(true), 60);
+    setTimeout(() => scrollBottom(true), 300);
+  });
+
+  function isNearBottom(px) {
+    return $main.scrollHeight - $main.scrollTop - $main.clientHeight <= (px == null ? 64 : px);
+  }
+
+  function updateJumpBtn() {
+    $jumpBtn.classList.toggle('show', !stickToBottom);
+  }
+
+  // force=true wale calls hamesha neeche pin karte hain (jaise user ka apna
+  // message bhejna, session kholna, keyboard khulna). Baaki sab (typing/streaming
+  // ke dauraan) sirf tab scroll karte hain jab user khud neeche par hi ho —
+  // isse agar wo upar scroll kar ke padh raha ho to beech mein rukawat nahi aati.
+  function scrollBottom(force) {
+    if (touching) return; // user ki ungli abhi screen par hai — kabhi force mat karo
+    if (!force && !stickToBottom) return;
+    $main.scrollTop = $main.scrollHeight;
+    stickToBottom = true;
+    updateJumpBtn();
+  }
+
+  let scrollTick = null;
+  $main.addEventListener('scroll', () => {
+    if (scrollTick) return;
+    scrollTick = requestAnimationFrame(() => {
+      stickToBottom = isNearBottom();
+      updateJumpBtn();
+      scrollTick = null;
+    });
+  });
+
+  // CRITICAL: typewriter effect har ~14ms pe DOM update karta hai, aur us hisaab
+  // se scrollBottom() bhi utni hi baar call hoti hai. Agar hum sirf 'scroll' event
+  // ka wait karte (jo tabhi fire hota hai jab scrollTop already badal chuka ho), to
+  // user ka touch-drag aur hamara forced-scroll ek race mein pad jaate the — user
+  // ka gesture start hone se pehle hi agla forced-scroll usse "cancel" kar deta tha,
+  // isliye upar scroll karna practically असंभव lagta tha. Fix: touchmove/wheel ka
+  // pehla pixel milte hi (scrollTop badalne se bhi pehle) stickiness turant off kar do.
+  function userInitiatedScroll() {
+    if (stickToBottom) {
+      stickToBottom = false;
+      updateJumpBtn();
+    }
+  }
+  $main.addEventListener('touchmove', userInitiatedScroll, { passive: true });
+  $main.addEventListener('wheel', userInitiatedScroll, { passive: true });
+  $main.addEventListener('touchstart', () => { touching = true; }, { passive: true });
+  $main.addEventListener('touchend', () => { touching = false; }, { passive: true });
+  $main.addEventListener('touchcancel', () => { touching = false; }, { passive: true });
+
+  $jumpBtn.addEventListener('click', () => {
+    stickToBottom = true;
+    $main.scrollTo({ top: $main.scrollHeight, behavior: 'smooth' });
+    updateJumpBtn();
+  });
+
+  function addUserBubble(text, filesMeta) {
+    const emptyEl = $main.querySelector('.empty');
+    if (emptyEl) emptyEl.remove();
+    const row = document.createElement('div');
+    row.className = 'row user';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if (filesMeta && filesMeta.length) {
+      const filesWrap = document.createElement('div');
+      filesWrap.className = 'msg-files';
+      filesMeta.forEach((f) => {
+        const tag = document.createElement('span');
+        tag.className = 'msg-file-tag';
+        tag.textContent = f.name;
+        filesWrap.appendChild(tag);
+      });
+      bubble.appendChild(filesWrap);
+    }
+    if (text) {
+      const textEl = document.createElement('span');
+      textEl.textContent = text;
+      bubble.appendChild(textEl);
+    }
+
+    row.appendChild(bubble);
+    $main.appendChild(row);
+    scrollBottom(true);
+  }
+
+  function addThinking() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.id = 'thinkingRow';
+    row.innerHTML = `<div class="thinking">
+      <img src="logo.png" class="rs-mark" width="24" height="24" alt="Chaman AI">
+    </div>`;
+    $main.appendChild(row);
+    scrollBottom(true);
+    return row;
+  }
+
+  // Live web-search status row — backend jab bhi ek [ACTION:web_search] phase
+  // stream karta hai ('searching' -> 'found'/'search_failed' -> 'answering'),
+  // yahi row us waqt real-time mein update hoti hai.
+  function addSearchStatus() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.innerHTML = `
+      <div class="search-status">
+        <span class="glass">🔍</span>
+        <span class="status-text"></span>
+        <span class="scan-bar"></span>
+      </div>`;
+    $main.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function updateSearchStatus(row, phase, query, count) {
+    if (!row) return;
+    const box = row.querySelector('.search-status');
+    const glass = row.querySelector('.glass');
+    const textEl = row.querySelector('.status-text');
+    if (!box) return;
+
+    if (phase === 'searching') {
+      box.className = 'search-status';
+      glass.textContent = '🔍';
+      textEl.innerHTML = `"${escapeHtml(query || '')}" search kar raha hoon<span class="dots"></span>`;
+    } else if (phase === 'found') {
+      box.className = 'search-status found';
+      glass.textContent = '✅';
+      textEl.textContent = `${count} results mile — jawab bana raha hoon`;
+    } else if (phase === 'search_failed') {
+      box.className = 'search-status failed';
+      glass.textContent = '⚠️';
+      textEl.textContent = 'Live search fail ho gaya — apni knowledge se jawab de raha hoon';
+    } else if (phase === 'answering') {
+      box.className = 'search-status found';
+      glass.textContent = '✍️';
+      textEl.innerHTML = `Jawab likh raha hoon<span class="dots"></span>`;
+    }
+    scrollBottom();
+  }
+
+  // Live code-run status row — search-status jaisi hi CSS classes reuse karte
+  // hain (bas emoji/text alag), taaki visually consistent lage.
+  function addCodeStatus() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.innerHTML = `
+      <div class="search-status">
+        <span class="glass">🐍</span>
+        <span class="status-text"></span>
+        <span class="scan-bar"></span>
+      </div>`;
+    $main.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function updateCodeStatus(row, phase) {
+    if (!row) return;
+    const box = row.querySelector('.search-status');
+    const glass = row.querySelector('.glass');
+    const textEl = row.querySelector('.status-text');
+    if (!box) return;
+
+    if (phase === 'running') {
+      box.className = 'search-status';
+      glass.textContent = '🐍';
+      textEl.innerHTML = `Python code sandbox mein chala raha hoon<span class="dots"></span>`;
+    } else if (phase === 'done') {
+      box.className = 'search-status found';
+      glass.textContent = '✅';
+      textEl.textContent = 'Code chal gaya — jawab bana raha hoon';
+    } else if (phase === 'failed') {
+      box.className = 'search-status failed';
+      glass.textContent = '⚠️';
+      textEl.textContent = 'Code mein error aayi — model ko bata raha hoon';
+    }
+    scrollBottom();
+  }
+
+  // ── Python Sandbox (Pyodide, ek isolated Web Worker ke andar) ──────────
+  // Model jo bhi [ACTION:run_code] se code bhejta hai, wo yahan chalta hai —
+  // poori tarah user ke apne browser mein, WASM (Pyodide/CPython) ke zariye.
+  // Worker ke andar koi file-system/network/env access nahi hota, isliye ye
+  // public users ke liye bhi safe hai (server ke API keys yahan kabhi
+  // exposed nahi hote — worker ko unka pata hi nahi chal sakta).
+  const PYODIDE_WORKER_SRC = `
+    importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
+    let pyodideReadyPromise = loadPyodide();
+    const SANDBOX_DIR = '/sandbox';
+
+    self.onmessage = async (e) => {
+      const { id, code, inputFiles } = e.data;
+      let stdout = '';
+      const write = (s) => { stdout += s; };
+      try {
+        const pyodide = await pyodideReadyPromise;
+        pyodide.setStdout({ batched: (s) => write(s + '\\n') });
+        pyodide.setStderr({ batched: (s) => write(s + '\\n') });
+
+        try { pyodide.FS.mkdir(SANDBOX_DIR); } catch (e2) { /* already exists */ }
+        pyodide.FS.chdir(SANDBOX_DIR);
+
+        // Attached files ko sandbox mein unke original naam se rakh do,
+        // taaki code seedha open("filename.ext") se padh sake.
+        const before = new Set();
+        try {
+          for (const f of pyodide.FS.readdir(SANDBOX_DIR)) {
+            if (f === '.' || f === '..') continue;
+            before.add(f);
+          }
+        } catch (e3) { /* ignore */ }
+
+        if (inputFiles && typeof inputFiles === 'object') {
+          for (const [name, content] of Object.entries(inputFiles)) {
+            try {
+              pyodide.FS.writeFile(name, content);
+              before.add(name); // input files ko "output" mein dobara mat gino
+            } catch (werr) { /* skip bad filename */ }
+          }
+        }
+
+        try {
+          const result = await pyodide.runPythonAsync(code);
+          const resultStr = (result === undefined || result === null) ? '' : String(result);
+
+          // Run ke baad directory dekho — jo bhi naya/change hua, wahi "output files" hain.
+          const outputFiles = [];
+          try {
+            for (const f of pyodide.FS.readdir(SANDBOX_DIR)) {
+              if (f === '.' || f === '..') continue;
+              if (before.has(f)) continue;
+              try {
+                const data = pyodide.FS.readFile(f, { encoding: 'utf8' });
+                outputFiles.push({ name: f, content: data });
+              } catch (readErr) { /* binary ya unreadable — skip (text-only support abhi) */ }
+            }
+          } catch (listErr) { /* ignore */ }
+
+          self.postMessage({ id, ok: true, stdout, result: resultStr, outputFiles });
+        } catch (runErr) {
+          self.postMessage({ id, ok: false, stdout, error: String(runErr) });
+        }
+      } catch (loadErr) {
+        self.postMessage({ id, ok: false, stdout, error: 'Sandbox load fail hua: ' + String(loadErr) });
+      }
+    };
+  `;
+
+  let pyWorker = null;
+  function getPyWorker() {
+    if (!pyWorker) {
+      const blob = new Blob([PYODIDE_WORKER_SRC], { type: 'application/javascript' });
+      pyWorker = new Worker(URL.createObjectURL(blob));
+    }
+    return pyWorker;
+  }
+
+  // Is conversation mein ab tak jitni bhi text/pdf files attach ki gayi hain,
+  // unka content yahan filename -> content map mein rakhte hain — taaki Python
+  // sandbox ko har run se pehle "current files" pata ho aur open("naam") se
+  // seedha padh sake. Naya chat shuru hone ya session switch hone par reset hota hai.
+  let sandboxFiles = {};
+  let pyMsgId = 0;
+  const CODE_TIMEOUT_MS = 10000; // 10s — koi bhi accidental infinite loop hamesha ke liye na chale
+
+  // { ok, stdout, result?, error?, outputFiles? } return karta hai. Kabhi reject
+  // nahi hota — timeout/crash bhi ek "ok:false" result ki tarah resolve hota hai,
+  // taaki caller loop mein hamesha aage badh sake.
+  function runPythonSandboxed(code) {
+    return new Promise((resolve) => {
+      const worker = getPyWorker();
+      const id = ++pyMsgId;
+      let settled = false;
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        worker.removeEventListener('message', onMsg);
+        resolve({ ok: false, stdout: '', error: 'Timeout — code 10 second se zyada chal gaya, rok diya gaya.' });
+      }, CODE_TIMEOUT_MS);
+
+      function onMsg(e) {
+        if (!e.data || e.data.id !== id) return;
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        worker.removeEventListener('message', onMsg);
+        resolve(e.data);
+      }
+      worker.addEventListener('message', onMsg);
+      worker.postMessage({ id, code, inputFiles: sandboxFiles });
+    });
+  }
+
+  // Code-run result ko ek "user" turn ki tarah wapas model ko bhejne ke liye
+  // format karta hai — web_search ke formatSearchResultsForModel jaisa hi pattern.
+  function formatCodeResultForModel(code, result) {
+    if (result.ok) {
+      const out = (result.stdout || '').trim();
+      const resultLine = result.result ? `\nReturn value: ${result.result}` : '';
+      const filesLine = (Array.isArray(result.outputFiles) && result.outputFiles.length)
+        ? `\nNayi files ban gayin (user ko already download button ki tarah dikh rahi hain, tujhe sirf naam mention karna hai, content dobara mat likh): ${result.outputFiles.map(f => f.name).join(', ')}`
+        : '';
+      return `[Python code run ho gaya, output:]\n${out || '(koi stdout output nahi tha)'}${resultLine}${filesLine}\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
+    }
+    return `[Python code run karte waqt error aayi:]\n${result.error || 'Unknown error'}\n${result.stdout ? `\nAb tak ka stdout:\n${result.stdout}` : ''}\n\n[User ko batao ki code mein kya galat hua, aur agar possible ho to sahi kiya hua code doosri baar suggest kar.]`;
+  }
+
+  // ── markdown renderer: headings, tables, lists, bold/italic/inline-code, fenced code blocks ──
+  let cbCounter = 0;
+  const codeStore = {}; // id -> {lang, code} (copy button ke liye, escaped HTML se alag rakha)
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // sirf inline patterns (bold/italic/inline-code) — block-level text ke andar use hota hai
+  function inlineFormat(str) {
+    let text = escapeHtml(str);
+    text = text.replace(/`([^`\n]+)`/g, (_, c) => `<code class="inline-code">${c}</code>`);
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    text = text.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    return text;
+  }
+
+  function isSeparatorRow(line) {
+    return line != null && line.includes('-') && /^\s*\|?[\s:\-|]+\|?\s*$/.test(line);
+  }
+
+  function splitTableRow(line) {
+    let l = line.trim();
+    if (l.startsWith('|')) l = l.slice(1);
+    if (l.endsWith('|')) l = l.slice(0, -1);
+    return l.split('|').map(c => c.trim());
+  }
+
+  function tableHtml(headerCells, rows) {
+    const thead = `<tr>${headerCells.map(c => `<th>${inlineFormat(c)}</th>`).join('')}</tr>`;
+    const tbody = rows
+      .map(r => `<tr>${r.map(c => `<td>${inlineFormat(c)}</td>`).join('')}</tr>`)
+      .join('');
+    return `<div class="md-table-wrap"><table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  }
+
+  function codeBlockHtml(id) {
+    const { lang, code } = codeStore[id];
+    return `<div class="codeblock" data-id="${id}">
+      <div class="codeblock-head">
+        <span class="lang">${escapeHtml(lang || 'text')}</span>
+        <button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>
+      </div>
+      <pre><code>${escapeHtml(code)}</code></pre>
+    </div>`;
+  }
+
+  function renderMarkdown(raw) {
+    // step 1: fenced code blocks nikaal ke placeholder line daal do (raw text par, escape se pehle)
+    const withPlaceholders = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      const id = 'cb' + (cbCounter++);
+      codeStore[id] = { lang: lang || '', code: code.replace(/\n$/, '') };
+      return `\u0000${id}\u0000`;
+    });
+
+    const lines = withPlaceholders.split('\n');
+    let html = '';
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      if (line.trim() === '') { i++; continue; }
+
+      // fenced code placeholder
+      if (/^\u0000cb\d+\u0000$/.test(line.trim())) {
+        html += line.trim();
+        i++;
+        continue;
+      }
+
+      // heading
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        const level = h[1].length;
+        html += `<h${level} class="md-h">${inlineFormat(h[2])}</h${level}>`;
+        i++;
+        continue;
+      }
+
+      // table (current line has |, next line is the ---|--- separator)
+      if (line.includes('|') && isSeparatorRow(lines[i + 1])) {
+        const headerCells = splitTableRow(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim() !== '' && lines[i].includes('|')) {
+          rows.push(splitTableRow(lines[i]));
+          i++;
+        }
+        html += tableHtml(headerCells, rows);
+        continue;
+      }
+
+      // unordered list
+      if (/^\s*[-*]\s+/.test(line)) {
+        let items = '';
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          items += `<li>${inlineFormat(lines[i].replace(/^\s*[-*]\s+/, ''))}</li>`;
+          i++;
+        }
+        html += `<ul class="md-list">${items}</ul>`;
+        continue;
+      }
+
+      // ordered list
+      if (/^\s*\d+\.\s+/.test(line)) {
+        let items = '';
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+          items += `<li>${inlineFormat(lines[i].replace(/^\s*\d+\.\s+/, ''))}</li>`;
+          i++;
+        }
+        html += `<ol class="md-list">${items}</ol>`;
+        continue;
+      }
+
+      // paragraph: consecutive plain lines until something else starts
+      const paraLines = [];
+      while (
+        i < lines.length &&
+        lines[i].trim() !== '' &&
+        !/^#{1,6}\s+/.test(lines[i]) &&
+        !/^\s*[-*]\s+/.test(lines[i]) &&
+        !/^\s*\d+\.\s+/.test(lines[i]) &&
+        !/^\u0000cb\d+\u0000$/.test(lines[i].trim()) &&
+        !(lines[i].includes('|') && isSeparatorRow(lines[i + 1]))
+      ) {
+        paraLines.push(lines[i]);
+        i++;
+      }
+      if (paraLines.length) {
+        html += `<p class="md-p">${paraLines.map(inlineFormat).join('<br>')}</p>`;
+      } else {
+        i++; // safety net, avoid infinite loop
+      }
+    }
+
+    // step 2: code block placeholders ko asli block se replace karo
+    html = html.replace(/\u0000(cb\d+)\u0000/g, (_, id) => codeBlockHtml(id));
+
+    return html;
+  }
+
+  window.copyCode = function (id) {
+    const entry = codeStore[id];
+    if (!entry) return;
+    navigator.clipboard.writeText(entry.code).then(() => {
+      const btn = document.querySelector(`.codeblock[data-id="${id}"] .copy-btn`);
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  };
+
+  // ── Sound FX (typing ticks) ──────────────────────────────────────────
+  // Web Audio API se live synthesize kiya jaata hai — koi .mp3/.wav asset
+  // load nahi karna padta, instant hai aur offline bhi chalega. Do alag
+  // "premium tick" sounds: user ke type karne pe crisp/higher-pitch click,
+  // AI ke jawab type-out hone pe softer/lower-pitch tick — taaki dono
+  // clearly alag sunayi dein.
+  const SoundFX = (() => {
+    let ctx = null;
+    let unlocked = false;
+
+    function getCtx() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      }
+      return ctx;
+    }
+
+    // Mobile browsers AudioContext ko "suspended" state mein start karte
+    // hain jab tak ek real user-gesture (touch/click/key) na aaye — pehle
+    // gesture pe hi resume kar dete hain, taaki baad mein sound chalne mein
+    // koi delay/silent-fail na ho.
+    function unlock() {
+      if (unlocked) return;
+      const c = getCtx();
+      if (!c) return;
+      if (c.state === 'suspended') c.resume().catch(() => {});
+      unlocked = true;
+    }
+    ['pointerdown', 'keydown'].forEach((ev) =>
+      document.addEventListener(ev, unlock, { once: true, passive: true })
+    );
+
+    // Ek chhota synthesized click/tick. freq/duration/gain/type badalke
+    // alag character wale sounds ban jaate hain.
+    function playTick({ freq, duration, gain, type }) {
+      const c = getCtx();
+      if (!c || c.state !== 'running') return;
+
+      const osc = c.createOscillator();
+      const amp = c.createGain();
+      osc.type = type;
+      // Har tick pe thoda pitch-jitter — robotic/repetitive na lage,
+      // ek natural "premium keyboard" feel ke liye (jaise iOS clicks).
+      const jitter = 1 + (Math.random() - 0.5) * 0.06;
+      osc.frequency.setValueAtTime(freq * jitter, c.currentTime);
+
+      amp.gain.setValueAtTime(gain, c.currentTime);
+      amp.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
+
+      osc.connect(amp).connect(c.destination);
+      osc.start();
+      osc.stop(c.currentTime + duration);
+    }
+
+    let lastUserTick = 0;
+    function userTick() {
+      // Fast typing ya paste pe flood na ho, isliye min-gap.
+      const now = performance.now();
+      if (now - lastUserTick < 35) return;
+      lastUserTick = now;
+      playTick({ freq: 1500, duration: 0.035, gain: 0.05, type: 'square' });
+    }
+
+    function aiTick() {
+      playTick({ freq: 720, duration: 0.05, gain: 0.045, type: 'sine' });
+    }
+
+    return { userTick, aiTick };
+  })();
+
+  // Bubble already has final rendered HTML (tags intact) — hum sirf text nodes ko
+  // khaali karke, order mein thoda-thoda reveal karte hain. Isse tags kabhi beech
+  // mein toot-te nahi (jaise markdown ka `**` ya code block).
+  function typewriterReveal(bubble, onDone) {
+    const walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) {
+      nodes.push({ node: n, full: n.textContent });
+      n.textContent = '';
+    }
+    if (!nodes.length) { if (onDone) onDone(); return; }
+
+    bubble.classList.add('typing');
+    const CHARS_PER_TICK = 3;
+    const TICK_MS = 22; // pehle 2 chars/14ms tha (~72 DOM writes/sec) — mobile pe scroll ke saath
+                         // reflow contention karta tha. Ab ~3 chars/22ms (~45/sec), roughly same speed.
+    let ni = 0, ci = 0, soundStep = 0;
+
+    function step() {
+      if (ni >= nodes.length) {
+        bubble.classList.remove('typing');
+        if (onDone) onDone();
+        return;
+      }
+      const entry = nodes[ni];
+      ci += CHARS_PER_TICK;
+      if (ci >= entry.full.length) {
+        entry.node.textContent = entry.full;
+        ni++;
+        ci = 0;
+      } else {
+        entry.node.textContent = entry.full.slice(0, ci);
+      }
+      // Har DOM-tick pe sound bajaayenge to ~45/sec ki buzz ban jaayegi —
+      // isliye har 3rd tick pe hi (~15/sec, ek natural tick-tick rhythm).
+      soundStep++;
+      if (soundStep % 3 === 0) SoundFX.aiTick();
+      scrollBottom();
+      setTimeout(step, TICK_MS);
+    }
+    step();
+  }
+
+  // ── Action Registry (frontend) ─────────────────────────────────────
+  // Backend jab bhi [ACTION:name]{...} bhejta hai, uska matching handler yahan
+  // se milta hai. Naya action-type add karna ho toh bas ek naya key daal do.
+  const ACTION_HANDLERS = {
+    ask_user: renderAskUser,
+  };
+
+  function renderAction(action, wrap) {
+    if (!action || !action.name) return;
+    const handler = ACTION_HANDLERS[action.name];
+    if (handler) handler(action.payload || {}, wrap);
+  }
+
+  // Python sandbox run ke dauraan jo bhi nayi files current directory mein
+  // ban gayi thin, unhe yahan chhote download chips ki tarah dikhate hain —
+  // click pe seedha Blob se browser download trigger ho jaata hai, koi
+  // server round-trip nahi (file already client ke paas hai).
+  function renderOutputFiles(files, wrap) {
+    const box = document.createElement('div');
+    box.className = 'output-files';
+    for (const f of files) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'output-file-chip';
+      chip.textContent = '⬇ ' + f.name;
+      chip.addEventListener('click', () => {
+        const blob = new Blob([f.content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      });
+      box.appendChild(chip);
+    }
+    wrap.appendChild(box);
+    scrollBottom();
+  }
+
+  function renderAskUser(payload, wrap) {
+    const { type, question, options } = payload;
+    if (!question || !Array.isArray(options) || !options.length) return;
+
+    const opts = options.slice(0, 4);
+    const isMulti = type === 'multi';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ask-user-backdrop';
+
+    const sheet = document.createElement('div');
+    sheet.className = 'ask-user-sheet';
+
+    const handle = document.createElement('div');
+    handle.className = 'ask-user-sheet-handle';
+    sheet.appendChild(handle);
+
+    const q = document.createElement('div');
+    q.className = 'ask-user-sheet-q';
+    q.textContent = question;
+    sheet.appendChild(q);
+
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'ask-user-sheet-opts';
+    sheet.appendChild(optsWrap);
+
+    // Sheet ko hata dete hain aur uski jagah chat ke andar ek chhota
+    // "aapka jawab" summary chhod dete hain — taaki scroll-back pe context
+    // dikhta rahe (jaise Claude ke apne ask_user widget mein hota hai).
+    function close() {
+      backdrop.classList.remove('show');
+      sheet.classList.remove('show');
+      setTimeout(() => {
+        backdrop.remove();
+        sheet.remove();
+      }, 250);
+    }
+
+    function markAnswered(text) {
+      const done = document.createElement('div');
+      done.className = 'ask-user-answered';
+      const b = document.createElement('b');
+      b.textContent = text;
+      done.append('Jawab: ', b);
+      wrap.appendChild(done);
+      scrollBottom();
+    }
+
+    if (isMulti) {
+      const selected = new Set();
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'ask-user-sheet-confirm';
+      confirmBtn.textContent = 'Confirm';
+      confirmBtn.disabled = true;
+
+      opts.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ask-user-sheet-opt';
+        const label = document.createElement('span');
+        label.textContent = opt;
+        const chk = document.createElement('span');
+        chk.className = 'chk sq';
+        btn.append(label, chk);
+        btn.addEventListener('click', () => {
+          if (selected.has(opt)) {
+            selected.delete(opt);
+            btn.classList.remove('selected');
+          } else {
+            selected.add(opt);
+            btn.classList.add('selected');
+          }
+          confirmBtn.disabled = selected.size === 0;
+        });
+        optsWrap.appendChild(btn);
+      });
+
+      confirmBtn.addEventListener('click', () => {
+        const answer = Array.from(selected).join(', ');
+        close();
+        if (answer) {
+          markAnswered(answer);
+          if (!busy) send(answer);
+        }
+      });
+      sheet.appendChild(confirmBtn);
+    } else {
+      opts.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ask-user-sheet-opt';
+        const label = document.createElement('span');
+        label.textContent = opt;
+        const chk = document.createElement('span');
+        chk.className = 'chk';
+        btn.append(label, chk);
+        btn.addEventListener('click', () => {
+          close();
+          markAnswered(opt);
+          if (!busy) send(opt);
+        });
+        optsWrap.appendChild(btn);
+      });
+    }
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(sheet);
+    // Ek frame chhod ke class add karo, taaki transform:translateY(100%) → 0
+    // ka transition trigger ho (same-frame class add pe browser transition skip
+    // kar sakta hai).
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      sheet.classList.add('show');
+    });
+    scrollBottom();
+  }
+
+  function addAssistantBubble(text, meta, isError, animate, action, outputFiles) {
+    // Backend action-parse fail ho jaaye aur text bhi khaali ho, to poori
+    // bubble blank na dikhe (jaisa pehle "Groq · model" + Copy button ke
+    // saath khaali box dikhta tha) — ek chhota fallback line de do.
+    if (!isError && !action && (!text || !text.trim())) {
+      text = 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
+    }
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (isError ? ' err' : '');
+    if (isError) {
+      bubble.textContent = text;
+    } else {
+      bubble.innerHTML = renderMarkdown(text);
+    }
+    wrap.appendChild(bubble);
+    row.appendChild(wrap);
+    $main.appendChild(row);
+
+    function attachMeta() {
+      const footer = document.createElement('div');
+      footer.className = 'msg-footer';
+
+      if (meta) {
+        const metaEl = document.createElement('span');
+        metaEl.className = 'meta';
+        metaEl.textContent = meta;
+        footer.appendChild(metaEl);
+      }
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'msg-copy-btn';
+      copyBtn.textContent = '⧉ Copy';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = '✓ Copied';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = '⧉ Copy';
+            copyBtn.classList.remove('copied');
+          }, 1500);
+        }).catch(() => {
+          copyBtn.textContent = 'Copy fail hua';
+          setTimeout(() => { copyBtn.textContent = '⧉ Copy'; }, 1500);
+        });
+      });
+      footer.appendChild(copyBtn);
+
+      wrap.appendChild(footer);
+      if (action) renderAction(action, wrap);
+      if (outputFiles && outputFiles.length) renderOutputFiles(outputFiles, wrap);
+      scrollBottom();
+    }
+
+    if (!isError && animate) {
+      // meta (provider · model) sirf typing khatam hone ke baad dikhta hai
+      typewriterReveal(bubble, attachMeta);
+    } else {
+      attachMeta();
+    }
+    scrollBottom();
+  }
+
+  function lightDot(providerName) {
+    $dots.forEach(d => d.classList.toggle('live', d.dataset.provider === providerName));
+  }
+
+  // Ek single /api/chat round-trip: request bhejta hai, NDJSON stream padhta
+  // hai (live web_search status animate karte hue), aur { finalEvent, errorEvent }
+  // return karta hai. thinkingRow already-mounted honi chahiye (caller banata hai).
+  async function fetchExchange(apiMessages, thinkingRow) {
+    let searchRow = null; // pehli 'status' event aane pe hi banti hai
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      let finalEvent = null;
+      let errorEvent = null;
+
+      if (res.body && res.body.getReader) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let nlIndex;
+          while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, nlIndex).trim();
+            buffer = buffer.slice(nlIndex + 1);
+            if (!line) continue;
+
+            let event;
+            try { event = JSON.parse(line); } catch { continue; }
+
+            if (event.type === 'status') {
+              if (!searchRow) {
+                thinkingRow.remove();
+                searchRow = addSearchStatus();
+              }
+              updateSearchStatus(searchRow, event.phase, event.query, event.count);
+            } else if (event.type === 'final') {
+              finalEvent = event;
+            } else if (event.type === 'error') {
+              errorEvent = event;
+            }
+          }
+        }
+      } else {
+        // Fallback: streaming reader available nahi hai (bahut purana browser) —
+        // seedha JSON ki tarah parse karo (naya backend NDJSON bhejta hai, isliye
+        // ye path sirf ek safety net hai).
+        const raw = await res.text();
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const event = JSON.parse(trimmed);
+            if (event.type === 'final') finalEvent = event;
+            else if (event.type === 'error') errorEvent = event;
+          } catch { /* ignore malformed line */ }
+        }
+      }
+
+      if (searchRow) searchRow.remove();
+      return { finalEvent, errorEvent };
+    } catch (err) {
+      if (searchRow) searchRow.remove();
+      return { finalEvent: null, errorEvent: { error: 'Network error — connection check kar.' } };
+    }
+  }
+
+  // Agar model ne [ACTION:run_code] maanga hai, to (web_search ki tarah, bas
+  // client-side) khud iss loop mein hi resolve kar dete hain: code Pyodide
+  // sandbox mein chalao, result ko agla "user" turn bana ke wapas model ko
+  // bhej do, jab tak wo final (non-run_code) jawab na de de ya max iterations
+  // khatam na ho jaayein.
+  const MAX_CODE_ITERATIONS = 3;
+
+  async function send(text, displayText, filesMeta) {
+    displayText = displayText != null ? displayText : text;
+    filesMeta = filesMeta || [];
+    history.push({ role: 'user', content: text, displayText, files: filesMeta });
+    addUserBubble(displayText, filesMeta);
+    $input.value = '';
+    $input.style.height = 'auto';
+
+    busy = true;
+    $send.disabled = true;
+
+    try {
+      let iter = 0;
+      const producedFiles = []; // is turn ke saare run_code iterations mein bani output files ka collection
+
+      while (true) {
+        const thinkingRow = addThinking();
+        const { finalEvent, errorEvent } = await fetchExchange(
+          history.map(m => ({ role: m.role, content: m.content })),
+          thinkingRow
+        );
+        thinkingRow.remove();
+
+        if (errorEvent) {
+          lightDot(null);
+          let errText = errorEvent.error || 'Kuch gadbad ho gayi.';
+          if (Array.isArray(errorEvent.details) && errorEvent.details.length) {
+            errText += '\n\n— Details —\n' + errorEvent.details.join('\n');
+          }
+          addAssistantBubble(errText, null, true);
+          return;
+        }
+        if (!finalEvent) {
+          addAssistantBubble('Kuch gadbad ho gayi — response incomplete tha.', null, true);
+          return;
+        }
+
+        if (finalEvent.action && finalEvent.action.name === 'run_code' && iter < MAX_CODE_ITERATIONS) {
+          iter++;
+          const code = finalEvent.action.payload && finalEvent.action.payload.code;
+          if (typeof code !== 'string' || !code.trim()) {
+            // Malformed request — jo bhi text mila usi ko final maan lo.
+            history.push({ role: 'assistant', content: finalEvent.reply, provider: finalEvent.provider, model: finalEvent.model });
+            persistTurn();
+            lightDot(finalEvent.provider);
+            addAssistantBubble(finalEvent.reply, `${finalEvent.provider} · ${finalEvent.model || ''}`, false, true, null, producedFiles);
+            return;
+          }
+
+          const codeRow = addCodeStatus();
+          updateCodeStatus(codeRow, 'running');
+          const result = await runPythonSandboxed(code);
+          updateCodeStatus(codeRow, result.ok ? 'done' : 'failed');
+          setTimeout(() => codeRow.remove(), 700);
+
+          // Nayi bani files ko sandboxFiles mein bhi merge karo (taaki agla
+          // iteration/run inhe bhi "existing file" ki tarah dekh sake) aur
+          // final turn pe download-chips ke liye collect kar lo.
+          if (Array.isArray(result.outputFiles)) {
+            for (const f of result.outputFiles) {
+              sandboxFiles[f.name] = f.content;
+              const existingIdx = producedFiles.findIndex((p) => p.name === f.name);
+              if (existingIdx !== -1) producedFiles.splice(existingIdx, 1);
+              producedFiles.push(f);
+            }
+          }
+
+          // Model ka action-call assistant turn ban jaata hai, aur code ka
+          // result agle "user" turn ki tarah feed hota hai.
+          history.push({ role: 'assistant', content: finalEvent.reply });
+          history.push({ role: 'user', content: formatCodeResultForModel(code, result) });
+          continue;
+        }
+
+        // run_code nahi maanga gaya (ya iterations khatam) — ye final answer hai.
+        history.push({ role: 'assistant', content: finalEvent.reply, provider: finalEvent.provider, model: finalEvent.model });
+        persistTurn(); // pehla successful reply aate hi session (agar naya hai) auto-ban jaata hai
+        lightDot(finalEvent.provider);
+        addAssistantBubble(finalEvent.reply, `${finalEvent.provider} · ${finalEvent.model || ''}`, false, true, finalEvent.action, producedFiles);
+        return;
+      }
+    } finally {
+      busy = false;
+      $send.disabled = false;
+      $input.focus();
+    }
+  }
+
+  $form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = $input.value.trim();
+    if (busy) return;
+    if (!text && attachedFiles.length === 0) return;
+    if (attachedFiles.some((f) => f.status === 'reading')) return; // file abhi padhi ja rahi hai, thoda ruko
+
+    const filesMeta = attachedFiles.map((f) => ({ name: f.name, kind: f.kind, status: f.status }));
+    const outgoing = buildOutgoingMessage(text, attachedFiles);
+    attachedFiles = [];
+    renderAttachChips();
+
+    send(outgoing, text, filesMeta);
+  });
+</script>
+</body>
+</html>

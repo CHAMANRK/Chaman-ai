@@ -1,0 +1,6 @@
+{
+  "name": "chaman-ai-chat",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Chaman AI — chat-only rebuild. Groq → OpenRouter → Cerebras → Mistral fallback."
+}
