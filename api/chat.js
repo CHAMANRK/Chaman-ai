@@ -114,7 +114,7 @@ const PROTOCOLS = {
   - Jab ye tag bhej raha ho, sirf yahi tag bhej — koi extra chatter mat likh, ye intermediate step hai.
   - Ek response mein sirf ek [ACTION:run_code] bhej.`,
   },
-  quran_quiz: {
+  quran_quiz_start: {
     describe:
 `[ACTION:quran_quiz_start]{"from":1,"to":30}[/ACTION]
   - Jab user Quran Ayat Quiz khelna chahe (jaise "quiz khelna hai", "ayat quiz", "quran wala game khelte hain").
