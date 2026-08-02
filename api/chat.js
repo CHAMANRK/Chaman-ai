@@ -116,14 +116,17 @@ const PROTOCOLS = {
   },
   quran_quiz_start: {
     describe:
-`[ACTION:quran_quiz_start]{"from":1,"to":30}[/ACTION]
+`[ACTION:quran_quiz_start]{"from":1,"to":30,"total":10}[/ACTION]
   - Jab user Quran Ayat Quiz khelna chahe (jaise "quiz khelna hai", "ayat quiz", "quran wala game khelte hain").
-  - Range abhi na diya ho to PEHLE [ACTION:ask_user] se poochh ki kitne para tak khelna hai — options jaise "Poora Quran (1-30)", "Para 1-10", "Para 11-20", "Custom" de do (ask_user ka free-text field "Custom" ke liye already available hai).
-  - Range confirm hote hi seedha ye [ACTION:quran_quiz_start] bhej — "from" aur "to" dono 1-30 ke beech, "from" <= "to".
+  - Shuru karne se pehle DO cheezein poochhni hain (agar user ne khud already na bata di ho) — ek-ek karke, [ACTION:ask_user] se (ek response mein sirf ek ask_user bhej sakta hai, isliye ye do alag turns mein poochhna):
+    1. Kitne para tak khelna hai — options jaise "Poora Quran (1-30)", "Para 1-10", "Para 11-20", "Custom".
+    2. Kitne sawaal (ayat) chahiye — options jaise "5", "10", "20", "Custom".
+  - Dono confirm hote hi seedha ye [ACTION:quran_quiz_start] bhej — "from"/"to" (1-30 ke beech, from<=to) aur "total" (poore session ke kitne sawaal honge).
   - Jab ye tag bhej raha ho, sirf yahi tag bhej — koi extra chatter mat likh. Client khud hi ek random ayat pick karke ek interactive card dikha dega (Ayat text + Para/Page input fields + Submit button) — tujhe khud kuch aur render/describe nahi karna.
-  - Ye action bhi background mein — bilkul web_search/run_code jaisa — client-side resolve hota hai. User jab card mein apna jawab (Para + Page) submit karega, uska poora result ek follow-up "user" turn ki tarah automatically tujhe wapas mil jaayega: kaunsi ayat dikhayi gayi thi (Surah/Para/Page samet), user ne kya jawab diya, aur sahi tha ya galat.
+  - Ye action bhi background mein — bilkul web_search/run_code jaisa — client-side resolve hota hai. User jab card mein apna jawab (Para + Page) submit karega, uska poora result ek follow-up "user" turn ki tarah automatically tujhe wapas mil jaayega: kaunsi ayat dikhayi gayi thi (Surah/Para/Page samet), user ne kya jawab diya, sahi tha ya galat, aur session ka progress ("Sawaal X/total", ab tak ka score) — agar ye session ka AAKHRI sawaal tha to isme saaf "QUIZ SESSION KHATAM" bhi likha hoga.
   - Jab tak wo result na aaye, tab tak assume mat kar user ne kya diya ya sahi tha ya galat — chup-chaap wait kar, isi turn mein dobara kuch bolne ki zaroorat nahi (card khud user ko dikh raha hoga).
-  - Result milne ke baad: agar sahi tha to chhoti si tareef kar; agar galat tha to sahi Surah/Para/Page bata ke halka encourage kar. Phir poochh agla sawaal chahiye ya nahi — "haan" mile to seedha wapas [ACTION:quran_quiz_start] bhej de (same ya naya range, jo user bole).
+  - Result milne ke baad (jab tak "QUIZ SESSION KHATAM" na likha ho): chhoti si reaction de (sahi tha to tareef, galat tha to sahi Surah/Para/Page bata ke halka encourage) aur BINA poochhe seedha agla [ACTION:quran_quiz_start] bhej de USI "from"/"to"/"total" ke saath (session khud-ba-khud chalta rahega jab tak saare sawaal khatam na ho jaayein) — beech mein baar-baar "agla chahiye?" mat pooch.
+  - Jab "QUIZ SESSION KHATAM" wala result aaye: koi naya [ACTION:quran_quiz_start] mat bhej, iske bajaye ek chhota final summary de (kitne sahi/kitne total) aur poochh ki naya session (naya range/count) khelna hai kya.
   - Ek response mein sirf ek [ACTION:quran_quiz_start] bhej.`,
   },
   termux_run: {

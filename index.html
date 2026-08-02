@@ -8,6 +8,8 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Scheherazade+New:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <style>
   :root{
     --ink:#12100e;
@@ -607,6 +609,32 @@
     border:1px solid var(--line);
     border-radius:8px;
   }
+  /* ── KaTeX math ── */
+  .md-math-block{
+    overflow-x:auto;
+    overflow-y:hidden;
+    margin:10px 0;
+    padding:10px 12px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .md-math-block .katex-display{margin:0;}
+  .md-math-inline{
+    display:inline-block;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    vertical-align:middle;
+  }
+  .md-math-error{
+    color:var(--rust);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+  }
+  .katex{color:var(--paper);font-size:1.05em;}
+  .katex-display{overflow-x:auto;overflow-y:hidden;}
   .md-table{
     border-collapse:collapse;
     width:100%;
@@ -2741,9 +2769,60 @@
     </div>`;
   }
 
+  // ── LaTeX/KaTeX support ──
+  // mathStore mein raw latex source rakhte hain, ussi tarah jaise codeStore
+  // code rakhta hai — placeholder ek "invisible" marker hai jisme koi
+  // HTML-special character (& < >) nahi hota, isliye woh inlineFormat ke
+  // escapeHtml se safely guzar jaata hai aur baad me asli KaTeX HTML se
+  // replace ho jaata hai.
+  let mathCounter = 0;
+  const mathStore = {};
+
+  function stashMath(latex, displayMode) {
+    const id = 'm' + (mathCounter++);
+    mathStore[id] = { latex, displayMode };
+    return `\u0002${id}\u0002`;
+  }
+
+  // Text ke andar se \[..\], \(..\), $$..$$ nikaal ke placeholder daal do.
+  // Order zaroori hai: pehle block-level (\[..\] aur $$..$$), phir inline (\(..\)).
+  function extractMath(text) {
+    let out = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, latex) => stashMath(latex, true));
+    out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_, latex) => stashMath(latex, true));
+    out = out.replace(/\\\(([\s\S]+?)\\\)/g, (_, latex) => stashMath(latex, false));
+    return out;
+  }
+
+  function renderMathHtml(id) {
+    const entry = mathStore[id];
+    if (!entry) return '';
+    if (typeof katex === 'undefined') {
+      // KaTeX load nahi hui (network issue) — raw latex hi dikha do taaki
+      // kam se kam kuch dikhe, silently gayab na ho jaaye.
+      const raw = escapeHtml(entry.displayMode ? `\\[${entry.latex}\\]` : `\\(${entry.latex}\\)`);
+      return entry.displayMode ? `<div class="md-math-block">${raw}</div>` : `<span class="md-math-inline">${raw}</span>`;
+    }
+    try {
+      const html = katex.renderToString(entry.latex, {
+        throwOnError: false,
+        displayMode: entry.displayMode,
+        strict: false,
+      });
+      return entry.displayMode ? `<div class="md-math-block">${html}</div>` : `<span class="md-math-inline">${html}</span>`;
+    } catch (err) {
+      return `<span class="md-math-error">[LaTeX error]</span>`;
+    }
+  }
+
   function renderMarkdown(raw) {
+    // step 0: LaTeX segments ko pehle nikaal lo (code blocks se bhi pehle,
+    // taaki ```...``` ke andar ke \[ \] galti se match na ho jaayein — code
+    // fences already literal backticks maangte hain jo alag hi handle hote
+    // hain, is liye order safe hai).
+    const withMathPlaceholders = extractMath(raw);
+
     // step 1: fenced code blocks nikaal ke placeholder line daal do (raw text par, escape se pehle)
-    const withPlaceholders = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const withPlaceholders = withMathPlaceholders.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       const id = 'cb' + (cbCounter++);
       codeStore[id] = { lang: lang || '', code: code.replace(/\n$/, '') };
       return `\u0000${id}\u0000`;
@@ -2823,7 +2902,12 @@
         paraLines.push(lines[i]);
         i++;
       }
-      if (paraLines.length) {
+      if (paraLines.length === 1 && /^\u0002m\d+\u0002$/.test(paraLines[0].trim())) {
+        // Sirf ek standalone block-math placeholder — <p> ke andar <div> daalna
+        // invalid nesting hota, isliye seedha placeholder chhod do (step 3 mein
+        // divi> ban jaayega).
+        html += paraLines[0].trim();
+      } else if (paraLines.length) {
         html += `<p class="md-p">${paraLines.map(inlineFormat).join('<br>')}</p>`;
       } else {
         i++; // safety net, avoid infinite loop
@@ -2832,6 +2916,9 @@
 
     // step 2: code block placeholders ko asli block se replace karo
     html = html.replace(/\u0000(cb\d+)\u0000/g, (_, id) => codeBlockHtml(id));
+
+    // step 3: math placeholders ko asli KaTeX-rendered HTML se replace karo
+    html = html.replace(/\u0002(m\d+)\u0002/g, (_, id) => renderMathHtml(id));
 
     return html;
   }
@@ -3147,6 +3234,12 @@
   // in-memory se filter+random-pick hota hai, koi dubara network call nahi.
   let quranData = null;
   let quranDataPromise = null;
+  // Ek quiz session (from/to/total/answered/correct) — jab tak "total" sawaal
+  // poore nahi ho jaate, agle har [ACTION:quran_quiz_start] pe isi session ko
+  // continue kiya jaata hai. Session khatam hote hi wapas null ho jaata hai,
+  // taaki agli baar "quiz khelna hai" bolne pe fresh session bane.
+  let activeQuiz = null;
+
   function loadQuranData() {
     if (!quranDataPromise) {
       quranDataPromise = fetch('quran_full.json')
@@ -3163,32 +3256,48 @@
   }
 
   // Quiz ka poora result — kaunsi ayat dikhi, sahi jawab kya tha, user ne
-  // kya diya, sahi/galat — yahi ek "user" turn ki tarah model ko wapas
-  // jaata hai (bilkul formatCodeResultForModel jaisa), taaki model kabhi
-  // kisi bhi cheez se "blind" na rahe, chahe UI mein card khud dikh raha ho.
-  function formatQuizResultForModel(verse, userPara, userPip, isCorrect) {
+  // kya diya, sahi/galat, aur session progress — yahi ek "user" turn ki
+  // tarah model ko wapas jaata hai (bilkul formatCodeResultForModel jaisa),
+  // taaki model kabhi kisi bhi cheez se "blind" na rahe, chahe UI mein card
+  // khud dikh raha ho, aur usko pata rahe kab session khatam ho gaya.
+  function formatQuizResultForModel(verse, userPara, userPip, isCorrect, session) {
+    const progressLine = `Sawaal ${session.answered}/${session.total} · Ab tak sahi: ${session.correct}/${session.answered}`;
+    const isLast = session.answered >= session.total;
     return `[Quran Quiz card ka result:]\n`
       + `Dikhayi gayi ayat: "${verse.text}"\n`
       + `Sahi jawab — Surah: ${verse.surah_name}, Para: ${verse.para}, Page: ${verse.pip} (Absolute Quran Page: ${verse.page})\n`
       + `User ka jawab — Para: ${userPara}, Page: ${userPip}\n`
-      + `Result: ${isCorrect ? 'SAHI ✅' : 'GALAT ❌'}\n\n`
-      + `[Isi ke base pe turant ek short Hinglish reaction de — sahi tha to tareef kar, galat tha to sahi Surah/Para/Page bata ke halka encourage kar. Phir poochh agla sawaal chahiye ya nahi — naya card khud text mein describe mat karna, agla chahiye to seedha [ACTION:quran_quiz_start] bhej dena.]`;
+      + `Result: ${isCorrect ? 'SAHI ✅' : 'GALAT ❌'}\n`
+      + `${progressLine}\n`
+      + (isLast
+        ? `QUIZ SESSION KHATAM — ye is session ka aakhri sawaal tha.\n\n[Ab koi naya [ACTION:quran_quiz_start] mat bhej. Ek chhota final summary de (${session.correct}/${session.total} sahi) aur poochh naya session (naya range/count) khelna hai kya.]`
+        : `\n[Isi ke base pe turant ek short Hinglish reaction de — sahi tha to tareef kar, galat tha to sahi Surah/Para/Page bata ke halka encourage kar. Fir BINA poochhe seedha agla [ACTION:quran_quiz_start] bhej de usi from/to/total ke saath — session abhi khatam nahi hua.]`);
   }
 
   function renderQuranQuizStart(payload, wrap) {
     let from = parseInt(payload && payload.from, 10);
     let to = parseInt(payload && payload.to, 10);
+    let total = parseInt(payload && payload.total, 10);
     if (!Number.isFinite(from)) from = 1;
     if (!Number.isFinite(to)) to = 30;
     from = Math.min(Math.max(from, 1), 30);
     to = Math.min(Math.max(to, 1), 30);
     if (from > to) { const t = from; from = to; to = t; }
+    if (!Number.isFinite(total) || total < 1) total = 10;
+
+    // Naya session sirf tabhi banao jab koi active session chal hi na raha ho
+    // (pehla sawaal). Baaki sab sawaalon ke liye wahi session object reuse
+    // hota hai, taaki progress/score sahi se accumulate ho.
+    if (!activeQuiz) {
+      activeQuiz = { from, to, total, answered: 0, correct: 0 };
+    }
+    const session = activeQuiz;
 
     const card = document.createElement('div');
     card.className = 'quiz-card';
     const eyebrow = document.createElement('div');
     eyebrow.className = 'quiz-card-eyebrow';
-    eyebrow.textContent = `🎯 Quiz · Para ${from}–${to}`;
+    eyebrow.textContent = `🎯 Quiz · Para ${session.from}–${session.to} · Sawaal ${session.answered + 1}/${session.total}`;
     card.appendChild(eyebrow);
 
     const loading = document.createElement('div');
@@ -3201,7 +3310,7 @@
 
     loadQuranData()
       .then(() => {
-        const verse = pickRandomAyat(from, to);
+        const verse = pickRandomAyat(session.from, session.to);
         loading.remove();
         if (!verse) {
           const err = document.createElement('div');
@@ -3211,14 +3320,14 @@
           scrollBottom();
           return;
         }
-        buildQuizCardBody(card, verse);
+        buildQuizCardBody(card, verse, session);
       })
       .catch(() => {
         loading.textContent = 'Ayat data load nahi ho saka — dobara try karo.';
       });
   }
 
-  function buildQuizCardBody(card, verse) {
+  function buildQuizCardBody(card, verse, session) {
     const ayat = document.createElement('div');
     ayat.className = 'quiz-ayat';
     ayat.textContent = verse.text;
@@ -3279,16 +3388,24 @@
       pageInput.disabled = true;
       submitBtn.disabled = true;
 
+      session.answered++;
+      if (isCorrect) session.correct++;
+
       const feedback = document.createElement('div');
       feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
       feedback.textContent = isCorrect
-        ? `✅ Sahi jawab! Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}.`
-        : `❌ Galat. Sahi jawab tha — Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}.`;
+        ? `✅ Sahi jawab! Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`
+        : `❌ Galat. Sahi jawab tha — Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`;
       card.appendChild(feedback);
       scrollBottom();
 
-      const hiddenNote = formatQuizResultForModel(verse, userPara, userPip, isCorrect);
+      const hiddenNote = formatQuizResultForModel(verse, userPara, userPip, isCorrect, session);
       const displayLabel = `🎯 Para ${userPara}, Page ${userPip}`;
+
+      // Session poora ho gaya ho to agla card banne se pehle hi reset kar do,
+      // taaki agli baar "quiz khelna hai" bolne pe naya session shuru ho.
+      if (session.answered >= session.total) activeQuiz = null;
+
       if (!busy) send(hiddenNote, displayLabel);
     });
 
