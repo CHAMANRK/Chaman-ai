@@ -530,11 +530,28 @@
   .codeblock-output .exit-line.fail{color:var(--rust);}
   .codeblock-stdin{
     display:flex;
-    gap:6px;
+    flex-direction:column;
+    gap:4px;
     border-top:1px solid var(--line);
     padding:6px 10px;
   }
-  .codeblock-stdin input{
+  .codeblock-stdin.waiting{
+    border-top-color:var(--amber);
+  }
+  .stdin-wait-hint{
+    font-size:11px;
+    color:var(--amber);
+    font-family:'IBM Plex Mono',monospace;
+    display:none;
+  }
+  .stdin-wait-hint.show{
+    display:block;
+  }
+  .stdin-input-row{
+    display:flex;
+    gap:6px;
+  }
+  .stdin-input-row input{
     flex:1;
     min-width:0;
     background:var(--ink-3);
@@ -545,7 +562,7 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:12px;
   }
-  .codeblock-stdin button{
+  .stdin-input-row button{
     all:unset;
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -1333,6 +1350,7 @@
       if (msg.type === 'output') runner.onOutput(msg.stream, msg.data);
       else if (msg.type === 'exit') runner.onExit(msg.code);
       else if (msg.type === 'error') runner.onError(msg.message);
+      else if (msg.type === 'waiting_input' && runner.onWaitingInput) runner.onWaitingInput(!!msg.waiting);
     },
 
     async run(command, handlers) {
@@ -2539,8 +2557,11 @@
     const outputHtml = isShell
       ? `<div class="codeblock-output" id="out-${id}"><pre id="outpre-${id}"></pre><div class="exit-line" id="exitline-${id}"></div></div>
          <div class="codeblock-stdin" id="stdinrow-${id}" style="display:none;">
-           <input type="text" id="stdin-${id}" placeholder="Input bhejo (process wait kar raha ho tab)…">
-           <button type="button" onclick="sendShellStdin('${id}')">Send</button>
+           <div class="stdin-wait-hint" id="stdinhint-${id}"></div>
+           <div class="stdin-input-row">
+             <input type="text" id="stdin-${id}" placeholder="Input bhejo…">
+             <button type="button" onclick="sendShellStdin('${id}')">Send</button>
+           </div>
          </div>`
       : '';
 
@@ -2676,6 +2697,7 @@
     const outPre = document.getElementById(`outpre-${id}`);
     const exitLine = document.getElementById(`exitline-${id}`);
     const stdinRow = document.getElementById(`stdinrow-${id}`);
+    const stdinHint = document.getElementById(`stdinhint-${id}`);
     if (!runBtn || !outBox) return;
 
     outBox.classList.add('show');
@@ -2683,6 +2705,8 @@
     exitLine.textContent = '';
     exitLine.className = 'exit-line';
     stdinRow.style.display = 'flex';
+    stdinRow.classList.remove('waiting');
+    if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
     runBtn.textContent = '⏹ Stop';
     runBtn.classList.add('running');
     runBtn.onclick = () => window.stopShellBlock(id);
@@ -2695,11 +2719,23 @@
         outPre.textContent += data;
         outBox.scrollTop = outBox.scrollHeight;
       },
+      onWaitingInput(waiting) {
+        // Server ne /proc check karke bataya hai ki command sach mein
+        // stdin ka wait kar rahi hai — sirf tabhi hint/highlight dikhao,
+        // hamesha nahi (jaisa pehle hota tha).
+        stdinRow.classList.toggle('waiting', waiting);
+        if (stdinHint) {
+          stdinHint.textContent = waiting ? '⌨ Command input maang rahi hai…' : '';
+          stdinHint.classList.toggle('show', waiting);
+        }
+      },
       onExit(code) {
         runBtn.textContent = '▶ Run';
         runBtn.classList.remove('running');
         runBtn.onclick = () => window.runShellBlock(id);
         stdinRow.style.display = 'none';
+        stdinRow.classList.remove('waiting');
+        if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
         exitLine.textContent = code === 0 ? '✓ Exit code 0' : `✗ Exit code ${code}`;
         exitLine.className = 'exit-line ' + (code === 0 ? 'ok' : 'fail');
         scrollBottom();
@@ -2712,6 +2748,8 @@
         runBtn.classList.remove('running');
         runBtn.onclick = () => window.runShellBlock(id);
         stdinRow.style.display = 'none';
+        stdinRow.classList.remove('waiting');
+        if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
         exitLine.textContent = '✗ ' + message;
         exitLine.className = 'exit-line fail';
         scrollBottom();
