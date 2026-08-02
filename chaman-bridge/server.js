@@ -167,6 +167,21 @@ function probeTools() {
   });
 }
 
+// Poore process group ko maarta hai (bash + uske saare descendants), taaki
+// Stop dabane pe sirf bash na mare, balki actual yt-dlp/ffmpeg/etc. bhi ruke.
+// Negative PID = "is pure group ko maro" (Unix convention). detached:true se
+// spawn kiya gaya child hi apne group ka leader hota hai, isliye -child.pid
+// kaam karta hai. Agar kisi wajah se ye fail ho (e.g. group already gone),
+// fallback mein seedha child ko hi kill kar dete hain.
+function killChildGroup(child) {
+  if (!child || child.pid == null) return;
+  try {
+    process.kill(-child.pid, 'SIGKILL');
+  } catch {
+    try { child.kill('SIGKILL'); } catch { /* already dead */ }
+  }
+}
+
 function checkAuth(req) {
   const url = new URL(req.url, 'http://localhost');
   const token = url.searchParams.get('token') || req.headers['x-bridge-token'];
@@ -255,8 +270,23 @@ wss.on('connection', (ws) => {
 
       // cwd persist karne ke liye: command ke baad hi ek exit-marker aur naya
       // pwd bhi print karwa dete hain, phir output se strip kar dete hain.
-      const wrapped = `cd "${cwd.replace(/"/g, '\\"')}" 2>/dev/null; ${command}; __code=$?; echo "${EXIT_MARKER}:$__code:$(pwd)"`;
-      child = spawn('bash', ['-lc', wrapped]);
+      // stdbuf -oL -eL: pipe pe chalne ke bawajood stdout/stderr ko line-buffered
+      // rakhta hai. Iske bina bahut se CLI tools (yt-dlp, ffmpeg, apt, ...)
+      // isatty() false dekh ke apna output fully-buffer kar dete hain, aur
+      // interactive prompt ("Overwrite? [y/N]") kabhi client tak pahunchta hi
+      // nahi — jabki process sach mein stdin ka wait kar raha hota hai.
+      const wrapped = `cd "${cwd.replace(/"/g, '\\"')}" 2>/dev/null; stdbuf -oL -eL bash -c ${JSON.stringify(command)}; __code=$?; echo "${EXIT_MARKER}:$__code:$(pwd)"`;
+      // detached:true → bash apne khud ke naye process group ka leader banta hai.
+      // Isse "kill" pe hum poore group ko (bash + uske saare descendants jaise
+      // yt-dlp/ffmpeg) ek saath maar sakte hain, sirf top-level bash ko nahi —
+      // warna SIGKILL sirf bash ko marta, aur actual kaam karne wala process
+      // (jaise yt-dlp) orphan ban ke background mein chalta hi reh jaata.
+      child = spawn('bash', ['-lc', wrapped], { detached: true });
+
+      // EPIPE-safe: agar child pehle hi exit ho chuka ho ya usne apna stdin
+      // band kar diya ho, to stdin.write() ek 'error' event throw karta hai.
+      // Bina is listener ke wo unhandled hokar poore process ko crash karta hai.
+      child.stdin.on('error', () => { /* EPIPE — child ne stdin band kar diya, ignore */ });
 
       let tail = ''; // last partial line buffer, taaki marker line ko split hone se bachaya ja sake
       let idleFlushTimer = null;
@@ -349,19 +379,19 @@ wss.on('connection', (ws) => {
 
     if (msg.type === 'stdin') {
       if (child && child.stdin.writable) {
-        child.stdin.write(msg.data.endsWith('\n') ? msg.data : msg.data + '\n');
+        try {
+          child.stdin.write(msg.data.endsWith('\n') ? msg.data : msg.data + '\n');
+        } catch { /* pipe already closed — child.stdin's 'error' listener handles it too */ }
       }
     }
 
     if (msg.type === 'kill') {
-      if (child) {
-        child.kill('SIGKILL');
-      }
+      killChildGroup(child);
     }
   });
 
   ws.on('close', () => {
-    if (child) child.kill('SIGKILL');
+    killChildGroup(child);
   });
 });
 

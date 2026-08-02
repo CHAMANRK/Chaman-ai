@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Scheherazade+New:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#12100e;
@@ -859,6 +859,40 @@
   }
   .ask-user-sheet-confirm:disabled{opacity:.4; cursor:not-allowed;}
 
+  /* Options ke neeche "ya apna jawab likho" wala free-text row — taaki user
+     sirf AI ke diye options tak limited na rahe. */
+  .ask-user-sheet-custom{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+  .ask-user-sheet-custom input{
+    flex:1;
+    min-width:0;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    color:var(--paper);
+    font:inherit;
+    font-size:14px;
+  }
+  .ask-user-sheet-custom button{
+    all:unset;
+    padding:11px 16px;
+    border-radius:10px;
+    background:var(--amber);
+    color:var(--ink);
+    font:inherit;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .ask-user-sheet-custom button:disabled{opacity:.4; cursor:not-allowed;}
+
   /* Sheet band hone ke baad chat ke andar chhota "jawab" summary reh jaata hai */
   .ask-user-answered{
     margin-top:8px;
@@ -976,32 +1010,147 @@
   .attach-chip .chip-remove:active::before,
   .attach-chip .chip-remove:active::after{background:var(--rust);}
 
-  /* ── output files produced by the Python sandbox (download chips) ── */
+  /* ── output files produced by the Python sandbox — Claude-style file cards ── */
   .output-files{
     display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    margin-top:8px;
+    flex-direction:column;
+    gap:8px;
+    margin-top:10px;
+    max-width:340px;
   }
-  .output-file-chip{
+  .output-file-card{
     all:unset;
     box-sizing:border-box;
-    display:inline-flex;
+    display:flex;
     align-items:center;
-    max-width:200px;
+    gap:12px;
+    width:100%;
+    padding:10px 12px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:14px;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .output-file-card:active{background:var(--ink-2); border-color:var(--amber-dim);}
+  .output-file-icon{
+    flex:0 0 auto;
+    width:38px; height:38px;
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .output-file-icon svg{width:19px; height:19px;}
+  .output-file-icon.code{background:rgba(232,163,61,.15); color:var(--amber);}
+  .output-file-icon.data{background:rgba(124,148,115,.18); color:var(--sage);}
+  .output-file-icon.doc{background:rgba(178,76,47,.15); color:var(--rust);}
+  .output-file-icon.other{background:rgba(168,157,138,.16); color:var(--paper-dim);}
+  .output-file-meta{
+    flex:1 1 auto;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .output-file-name{
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--paper);
+    white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-    white-space:nowrap;
-    background:var(--sage-dim);
-    border:1px solid var(--sage);
-    border-radius:8px;
-    padding:6px 10px;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11.5px;
-    color:var(--sage);
-    cursor:pointer;
   }
-  .output-file-chip:active{background:var(--sage);color:var(--ink);}
+  .output-file-sub{
+    font-size:11px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.02em;
+  }
+  .output-file-download{
+    flex:0 0 auto;
+    width:30px; height:30px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--amber);
+  }
+  .output-file-download svg{width:16px; height:16px;}
+  .output-file-card:active .output-file-download{background:var(--amber); color:var(--ink);}
+
+  /* ── Quran Quiz card — [ACTION:quran_quiz_start] ── */
+  .quiz-card{
+    margin-top:10px;
+    max-width:340px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+  .quiz-card-eyebrow{
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--amber);
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .quiz-card-loading{
+    font-size:13px;
+    color:var(--paper-dim);
+    padding:10px 0;
+  }
+  .quiz-ayat{
+    font-family:'Scheherazade New', serif;
+    font-size:23px;
+    direction:rtl;
+    text-align:center;
+    line-height:2;
+    color:var(--paper);
+    padding:12px 4px;
+    border-bottom:1px dashed var(--line);
+    margin-bottom:12px;
+  }
+  .quiz-inputs-row{display:flex; gap:10px; margin-bottom:10px;}
+  .quiz-field{flex:1;}
+  .quiz-field label{
+    display:block;
+    font-size:11.5px;
+    color:var(--paper-dim);
+    margin-bottom:4px;
+  }
+  .quiz-field input{
+    width:100%;
+    padding:9px 10px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--ink-2);
+    color:var(--paper);
+    font-size:14px;
+    font-family:inherit;
+  }
+  .quiz-field input:focus{outline:none; border-color:var(--amber);}
+  .quiz-submit-btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:var(--amber);
+    color:var(--ink);
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .quiz-submit-btn:active{transform:scale(.98);}
+  .quiz-submit-btn:disabled{opacity:.5; cursor:default;}
+  .quiz-feedback{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .quiz-feedback.correct{background:rgba(124,148,115,.15); border:1px solid var(--sage); color:#c7dcc0;}
+  .quiz-feedback.wrong{background:rgba(178,76,47,.15); border:1px solid var(--rust); color:#f0c3b8;}
+  .quiz-error{font-size:12.5px; color:var(--rust); margin-top:6px;}
 
   /* ── attached-file tags shown inside a sent user bubble ── */
   .msg-files{
@@ -2909,6 +3058,7 @@
   const ACTION_HANDLERS = {
     ask_user: renderAskUser,
     termux_run: renderTermuxRun,
+    quran_quiz_start: renderQuranQuizStart,
   };
 
   function renderAction(action, wrap) {
@@ -2917,19 +3067,63 @@
     if (handler) handler(action.payload || {}, wrap);
   }
 
+  // File-type se icon-category aur short label decide karta hai — sirf visual
+  // grouping ke liye hai, download logic pe koi asar nahi.
+  const FILE_TYPE_MAP = {
+    py: 'code', js: 'code', ts: 'code', jsx: 'code', html: 'code', css: 'code', sh: 'code', json: 'code',
+    csv: 'data', tsv: 'data', xlsx: 'data', xls: 'data',
+    txt: 'doc', md: 'doc', pdf: 'doc', docx: 'doc',
+  };
+  function fileIconSvg() {
+    // Generic document icon — rang category ke hisaab se CSS class decide karta hai.
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+  }
+  function downloadIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
+  }
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
   // Python sandbox run ke dauraan jo bhi nayi files current directory mein
-  // ban gayi thin, unhe yahan chhote download chips ki tarah dikhate hain —
-  // click pe seedha Blob se browser download trigger ho jaata hai, koi
-  // server round-trip nahi (file already client ke paas hai).
+  // ban gayi thin, unhe yahan Claude-style file cards ki tarah dikhate hain —
+  // icon + naam + size, poora card tap karne pe seedha Blob se browser
+  // download trigger ho jaata hai, koi server round-trip nahi (file already
+  // client ke paas hai).
   function renderOutputFiles(files, wrap) {
     const box = document.createElement('div');
     box.className = 'output-files';
     for (const f of files) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'output-file-chip';
-      chip.textContent = '⬇ ' + f.name;
-      chip.addEventListener('click', () => {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const category = FILE_TYPE_MAP[ext] || 'other';
+      const bytes = new TextEncoder().encode(f.content || '').length;
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'output-file-card';
+
+      const icon = document.createElement('div');
+      icon.className = `output-file-icon ${category}`;
+      icon.innerHTML = fileIconSvg();
+
+      const meta = document.createElement('div');
+      meta.className = 'output-file-meta';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'output-file-name';
+      nameEl.textContent = f.name;
+      const subEl = document.createElement('div');
+      subEl.className = 'output-file-sub';
+      subEl.textContent = `${ext ? ext.toUpperCase() + ' · ' : ''}${formatFileSize(bytes)}`;
+      meta.append(nameEl, subEl);
+
+      const dl = document.createElement('div');
+      dl.className = 'output-file-download';
+      dl.innerHTML = downloadIconSvg();
+
+      card.append(icon, meta, dl);
+      card.addEventListener('click', () => {
         const blob = new Blob([f.content], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2940,9 +3134,164 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       });
-      box.appendChild(chip);
+      box.appendChild(card);
     }
     wrap.appendChild(box);
+    scrollBottom();
+  }
+
+  // ── Quran Quiz — [ACTION:quran_quiz_start]{"from":1,"to":30} ───────────
+  // Bilkul run_code jaisa "client-side resolved" action hai — server ko
+  // ayat data ki zaroorat hi nahi, sab kuch yahin browser mein ho jaata hai.
+  // quran_full.json ek baar fetch/cache ho jaata hai (~2.2MB), phir sirf
+  // in-memory se filter+random-pick hota hai, koi dubara network call nahi.
+  let quranData = null;
+  let quranDataPromise = null;
+  function loadQuranData() {
+    if (!quranDataPromise) {
+      quranDataPromise = fetch('quran_full.json')
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then((data) => { quranData = data; return data; });
+    }
+    return quranDataPromise;
+  }
+
+  function pickRandomAyat(from, to) {
+    const pool = quranData.filter((a) => a.para >= from && a.para <= to);
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Quiz ka poora result — kaunsi ayat dikhi, sahi jawab kya tha, user ne
+  // kya diya, sahi/galat — yahi ek "user" turn ki tarah model ko wapas
+  // jaata hai (bilkul formatCodeResultForModel jaisa), taaki model kabhi
+  // kisi bhi cheez se "blind" na rahe, chahe UI mein card khud dikh raha ho.
+  function formatQuizResultForModel(verse, userPara, userPip, isCorrect) {
+    return `[Quran Quiz card ka result:]\n`
+      + `Dikhayi gayi ayat: "${verse.text}"\n`
+      + `Sahi jawab — Surah: ${verse.surah_name}, Para: ${verse.para}, Page: ${verse.pip} (Absolute Quran Page: ${verse.page})\n`
+      + `User ka jawab — Para: ${userPara}, Page: ${userPip}\n`
+      + `Result: ${isCorrect ? 'SAHI ✅' : 'GALAT ❌'}\n\n`
+      + `[Isi ke base pe turant ek short Hinglish reaction de — sahi tha to tareef kar, galat tha to sahi Surah/Para/Page bata ke halka encourage kar. Phir poochh agla sawaal chahiye ya nahi — naya card khud text mein describe mat karna, agla chahiye to seedha [ACTION:quran_quiz_start] bhej dena.]`;
+  }
+
+  function renderQuranQuizStart(payload, wrap) {
+    let from = parseInt(payload && payload.from, 10);
+    let to = parseInt(payload && payload.to, 10);
+    if (!Number.isFinite(from)) from = 1;
+    if (!Number.isFinite(to)) to = 30;
+    from = Math.min(Math.max(from, 1), 30);
+    to = Math.min(Math.max(to, 1), 30);
+    if (from > to) { const t = from; from = to; to = t; }
+
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'quiz-card-eyebrow';
+    eyebrow.textContent = `🎯 Quiz · Para ${from}–${to}`;
+    card.appendChild(eyebrow);
+
+    const loading = document.createElement('div');
+    loading.className = 'quiz-card-loading';
+    loading.textContent = 'Ayat load ho rahi hai…';
+    card.appendChild(loading);
+
+    wrap.appendChild(card);
+    scrollBottom();
+
+    loadQuranData()
+      .then(() => {
+        const verse = pickRandomAyat(from, to);
+        loading.remove();
+        if (!verse) {
+          const err = document.createElement('div');
+          err.className = 'quiz-error';
+          err.textContent = 'Is para range mein koi ayat nahi mili.';
+          card.appendChild(err);
+          scrollBottom();
+          return;
+        }
+        buildQuizCardBody(card, verse);
+      })
+      .catch(() => {
+        loading.textContent = 'Ayat data load nahi ho saka — dobara try karo.';
+      });
+  }
+
+  function buildQuizCardBody(card, verse) {
+    const ayat = document.createElement('div');
+    ayat.className = 'quiz-ayat';
+    ayat.textContent = verse.text;
+    card.appendChild(ayat);
+
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'quiz-inputs-row';
+
+    const paraField = document.createElement('div');
+    paraField.className = 'quiz-field';
+    const paraLabel = document.createElement('label');
+    paraLabel.textContent = 'Para';
+    const paraInput = document.createElement('input');
+    paraInput.type = 'number';
+    paraInput.min = '1';
+    paraInput.max = '30';
+    paraInput.placeholder = 'e.g. 3';
+    paraField.append(paraLabel, paraInput);
+
+    const pageField = document.createElement('div');
+    pageField.className = 'quiz-field';
+    const pageLabel = document.createElement('label');
+    pageLabel.textContent = 'Page';
+    const pageInput = document.createElement('input');
+    pageInput.type = 'number';
+    pageInput.min = '1';
+    pageInput.max = '25';
+    pageInput.placeholder = 'e.g. 12';
+    pageField.append(pageLabel, pageInput);
+
+    inputsRow.append(paraField, pageField);
+    card.appendChild(inputsRow);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    submitBtn.className = 'quiz-submit-btn';
+    submitBtn.textContent = 'Jawab Bhejein';
+    card.appendChild(submitBtn);
+
+    const errBox = document.createElement('div');
+    errBox.className = 'quiz-error';
+    errBox.style.display = 'none';
+    card.appendChild(errBox);
+
+    submitBtn.addEventListener('click', () => {
+      const userPara = parseInt(paraInput.value, 10);
+      const userPip = parseInt(pageInput.value, 10);
+      if (!Number.isFinite(userPara) || !Number.isFinite(userPip)) {
+        errBox.textContent = 'Dono fields bharo — Para aur Page.';
+        errBox.style.display = 'block';
+        return;
+      }
+      errBox.style.display = 'none';
+
+      const isCorrect = userPara === verse.para && userPip === verse.pip;
+
+      paraInput.disabled = true;
+      pageInput.disabled = true;
+      submitBtn.disabled = true;
+
+      const feedback = document.createElement('div');
+      feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
+      feedback.textContent = isCorrect
+        ? `✅ Sahi jawab! Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}.`
+        : `❌ Galat. Sahi jawab tha — Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}.`;
+      card.appendChild(feedback);
+      scrollBottom();
+
+      const hiddenNote = formatQuizResultForModel(verse, userPara, userPip, isCorrect);
+      const displayLabel = `🎯 Para ${userPara}, Page ${userPip}`;
+      if (!busy) send(hiddenNote, displayLabel);
+    });
+
     scrollBottom();
   }
 
@@ -3066,6 +3415,34 @@
         optsWrap.appendChild(btn);
       });
     }
+
+    // ── "Ya apna jawab likho" — diye gaye options tak limited nahi rehna
+    // chahiye, user apna khud ka jawab type karke bhi bhej sake. Single aur
+    // multi dono modes mein same row kaam karta hai — jo bhi custom text ho,
+    // wahi seedha final jawab ban jaata hai (checkbox selection ignore ho
+    // jaati hai agar user ne custom text bhi type kar diya ho).
+    const customRow = document.createElement('div');
+    customRow.className = 'ask-user-sheet-custom';
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.placeholder = 'Ya apna jawab likho…';
+    const customBtn = document.createElement('button');
+    customBtn.type = 'button';
+    customBtn.textContent = 'Bhej';
+    customRow.append(customInput, customBtn);
+    sheet.appendChild(customRow);
+
+    function submitCustom() {
+      const answer = customInput.value.trim();
+      if (!answer) return;
+      close();
+      markAnswered(answer);
+      if (!busy) send(answer);
+    }
+    customBtn.addEventListener('click', submitCustom);
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitCustom();
+    });
 
     document.body.appendChild(backdrop);
     document.body.appendChild(sheet);
