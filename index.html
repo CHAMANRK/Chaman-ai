@@ -1391,7 +1391,26 @@
 
   let history = []; // {role, content, provider?, model?} — current session ki poori raw chat
   let busy = false;
+  let currentAbortController = null; // jo bhi /api/chat request abhi in-flight hai, uska controller — Stop button isi ko abort karta hai
   let activeSessionId = null; // null = abhi tak koi reply nahi aaya, session bana hi nahi
+
+  // Send button ab busy state mein kabhi disable nahi hota — uski jagah wahi
+  // button "Stop" ban jaata hai (icon badal jaata hai, clickable rehta hai).
+  const SEND_ICON = 'https://img.icons8.com/led/32/sent.png';
+  const STOP_ICON = 'https://img.icons8.com/led/32/stop-squared.png';
+  function setSendButtonBusy(isBusy) {
+    $send.disabled = false;
+    $send.innerHTML = isBusy
+      ? `<img src="${STOP_ICON}" alt="Rok do" width="20" height="20">`
+      : `<img src="${SEND_ICON}" alt="Send" width="20" height="20">`;
+    $send.setAttribute('aria-label', isBusy ? 'Rok do' : 'Bhejo');
+  }
+
+  // Abhi jo bhi request chal rahi hai use abort kar do — fetchExchange isi
+  // controller ko sun raha hota hai, abort hote hi AbortError throw hoga.
+  function stopGeneration() {
+    if (currentAbortController) currentAbortController.abort();
+  }
 
   // "Stick to bottom" — jab tak user khud upar scroll na kare, naya content
   // aane par hum neeche pin karte rehte hain. Jaise hi user upar scroll karta
@@ -3744,11 +3763,14 @@
   // return karta hai. thinkingRow already-mounted honi chahiye (caller banata hai).
   async function fetchExchange(apiMessages, thinkingRow) {
     let searchRow = null; // pehli 'status' event aane pe hi banti hai
+    const controller = new AbortController();
+    currentAbortController = controller;
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages, termuxStatus: Bridge.status }),
+        signal: controller.signal,
       });
 
       let finalEvent = null;
@@ -3806,7 +3828,14 @@
       return { finalEvent, errorEvent };
     } catch (err) {
       if (searchRow) searchRow.remove();
+      // User ne khud Stop dabaya — ye ek real error nahi hai, isliye alag se
+      // flag karte hain taaki caller koi error-bubble na dikhaye, chup-chaap ruk jaaye.
+      if (err && err.name === 'AbortError') {
+        return { finalEvent: null, errorEvent: null, aborted: true };
+      }
       return { finalEvent: null, errorEvent: { error: 'Network error — connection check kar.' } };
+    } finally {
+      if (currentAbortController === controller) currentAbortController = null;
     }
   }
 
@@ -3826,7 +3855,7 @@
     $input.style.height = 'auto';
 
     busy = true;
-    $send.disabled = true;
+    setSendButtonBusy(true);
 
     try {
       let iter = 0;
@@ -3834,11 +3863,18 @@
 
       while (true) {
         const thinkingRow = addThinking();
-        const { finalEvent, errorEvent } = await fetchExchange(
+        const { finalEvent, errorEvent, aborted } = await fetchExchange(
           history.map(m => ({ role: m.role, content: m.content })),
           thinkingRow
         );
         thinkingRow.remove();
+
+        if (aborted) {
+          // User ne khud Stop dabaya — koi error bubble nahi, bas chup-chaap
+          // ruk jao. Is turn ka partial history (agar koi ho) already push
+          // nahi hua tha, isliye state consistent rehta hai.
+          return;
+        }
 
         if (errorEvent) {
           lightDot(null);
@@ -3900,15 +3936,21 @@
       }
     } finally {
       busy = false;
-      $send.disabled = false;
+      setSendButtonBusy(false);
+      currentAbortController = null;
       $input.focus();
     }
   }
 
   $form.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (busy) {
+      // Send button abhi "Stop" mode mein hai (busy → disabled nahi, bas
+      // icon badla hai) — isi click se chal rahi request abort ho jaati hai.
+      stopGeneration();
+      return;
+    }
     const text = $input.value.trim();
-    if (busy) return;
     if (!text && attachedFiles.length === 0) return;
     if (attachedFiles.some((f) => f.status === 'reading')) return; // file abhi padhi ja rahi hai, thoda ruko
 
