@@ -3121,6 +3121,17 @@
     );
     wrap.appendChild(bubble);
 
+    // Fixed restart command — user ko khud apne Termux app mein paste karke
+    // chalana hai (bridge se "▶ Run" se nahi chala sakte, kyunki abhi bridge
+    // server khud hi band hai — usko start karne ke liye hi ye command hai).
+    // Isliye lang ko SHELL_LANGS se bahar rakha hai, taaki sirf Copy button
+    // aaye, koi Run/stdin UI nahi.
+    const cmdId = 'cb' + (cbCounter++);
+    codeStore[cmdId] = { lang: 'text', code: 'cd chaman-bridge && npm start' };
+    const cmdWrap = document.createElement('div');
+    cmdWrap.innerHTML = codeBlockHtml(cmdId);
+    wrap.appendChild(cmdWrap.firstElementChild);
+
     const actionsRow = document.createElement('div');
     actionsRow.className = 'bridge-inline-actions';
     const connectBtn = document.createElement('button');
