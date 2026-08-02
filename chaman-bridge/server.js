@@ -27,6 +27,7 @@
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
+const fsp = require('fs/promises');
 const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
@@ -60,6 +61,90 @@ const BLOCKED_PATTERNS = [
 
 function isBlocked(cmd) {
   return BLOCKED_PATTERNS.some((re) => re.test(cmd));
+}
+
+// ── "Kya command sach mein stdin ka wait kar rahi hai?" detector ──────────
+// Node ka spawn() ye seedha nahi bata sakta — isliye Linux/Android ke /proc
+// se khud check karte hain. Zaroori hai poori descendant-tree dekhna, kyunki
+// hum `bash -lc "..."` spawn karte hain, aur asli interactive program
+// (jaise koi installer jo password/confirm maange) bash ka CHILD hota hai,
+// khud bash nahi.
+async function listDescendants(rootPid) {
+  let entries;
+  try {
+    entries = await fsp.readdir('/proc');
+  } catch {
+    return []; // /proc readable nahi hai is device pe — gracefully give up
+  }
+  const childrenOf = new Map();
+  for (const name of entries) {
+    if (!/^\d+$/.test(name)) continue;
+    try {
+      const stat = await fsp.readFile(`/proc/${name}/stat`, 'utf8');
+      // format: pid (comm) state ppid ...  — comm mein khud ")" ho sakta hai,
+      // isliye aakhri ")" ke baad se fields count karte hain.
+      const closeParen = stat.lastIndexOf(')');
+      const rest = stat.slice(closeParen + 2).split(' ');
+      const ppid = Number(rest[1]);
+      if (!childrenOf.has(ppid)) childrenOf.set(ppid, []);
+      childrenOf.get(ppid).push(Number(name));
+    } catch {
+      // process already exit ho chuka hoga beech mein — skip
+    }
+  }
+  const result = [];
+  const queue = [rootPid];
+  while (queue.length) {
+    const pid = queue.shift();
+    const kids = childrenOf.get(pid) || [];
+    for (const kid of kids) {
+      result.push(kid);
+      queue.push(kid);
+    }
+  }
+  return result;
+}
+
+// Bash child ke apne fd 0 (stdin) ka pipe-inode nikaalta hai — descendants ke
+// fd 0 isi inode se compare karke confirm karte hain ki wahi stdin hai, koi
+// alag file/socket nahi.
+async function getStdinPipeInode(pid) {
+  try {
+    const link = await fsp.readlink(`/proc/${pid}/fd/0`);
+    const m = link.match(/pipe:\[(\d+)\]/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function isBlockedOnStdin(pid, stdinPipeInode) {
+  try {
+    const status = await fsp.readFile(`/proc/${pid}/status`, 'utf8');
+    const stateMatch = status.match(/State:\s*(\S)/);
+    if (!stateMatch || stateMatch[1] !== 'S') return false; // sirf "sleeping" state relevant hai
+
+    const wchan = await fsp.readFile(`/proc/${pid}/wchan`, 'utf8').catch(() => '');
+    if (!/read/i.test(wchan)) return false; // kisi read-jaisi kernel function mein sona chahiye
+
+    if (stdinPipeInode) {
+      const fd0 = await fsp.readlink(`/proc/${pid}/fd/0`).catch(() => null);
+      if (!fd0 || !fd0.includes(stdinPipeInode)) return false; // dusri file/fd pe block hai, stdin pe nahi
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Poora descendant-tree check karta hai; koi bhi ek process stdin-block mile
+// to turant true maan lo (best-effort — /proc na milne pe silently false).
+async function anyDescendantWaitingOnStdin(rootPid, stdinPipeInode) {
+  const pids = [rootPid, ...(await listDescendants(rootPid))];
+  for (const pid of pids) {
+    if (await isBlockedOnStdin(pid, stdinPipeInode)) return true;
+  }
+  return false;
 }
 
 // ── Tool probe — connect hote hi bata do kya-kya installed hai ─────────────
@@ -150,7 +235,7 @@ wss.on('connection', (ws) => {
 
   probeTools().then((tools) => send({ type: 'ready', cwd, tools, host: os.hostname() }));
 
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch { return; }
 
@@ -174,6 +259,26 @@ wss.on('connection', (ws) => {
       child = spawn('bash', ['-lc', wrapped]);
 
       let tail = ''; // last partial line buffer, taaki marker line ko split hone se bachaya ja sake
+      let idleFlushTimer = null;
+      const IDLE_FLUSH_MS = 250; // itni der koi naya data na aaye to jo bhi ruka hua hai (jaise ek prompt "Password: " jiske aage newline hi nahi aata) usko turant dikha do
+
+      // Kya abhi tak accumulate hua `tail` EXIT_MARKER ka possible prefix hai?
+      // Agar haan, to abhi flush mat karo — ho sakta hai wahi marker ban raha ho.
+      function couldStillBecomeMarker(s) {
+        if (!s) return false;
+        const probe = s.length <= EXIT_MARKER.length ? s : s.slice(0, EXIT_MARKER.length);
+        return EXIT_MARKER.startsWith(probe);
+      }
+
+      function scheduleIdleFlush(streamName) {
+        clearTimeout(idleFlushTimer);
+        idleFlushTimer = setTimeout(() => {
+          if (tail && !couldStillBecomeMarker(tail)) {
+            send({ type: 'output', stream: streamName, data: tail });
+            tail = '';
+          }
+        }, IDLE_FLUSH_MS);
+      }
 
       const handleChunk = (streamName) => (data) => {
         tail += data.toString();
@@ -187,12 +292,41 @@ wss.on('connection', (ws) => {
           }
           send({ type: 'output', stream: streamName, data: line + '\n' });
         }
+        // Jo bacha (bina newline ke) hai, use bhi thodi der baad live dikha do —
+        // taaki koi bhi interactive prompt ("Continue? [y/n] ", "Password: ")
+        // turant block ke andar nazar aaye, sirf process khatam hone ka wait na ho.
+        scheduleIdleFlush(streamName);
       };
 
       child.stdout.on('data', handleChunk('stdout'));
       child.stderr.on('data', handleChunk('stderr'));
 
+      // ── Live "kya process stdin ka wait kar raha hai" polling ──────────
+      let waitingPollTimer = null;
+      let lastWaitingSent = false;
+      const stdinPipeInode = await getStdinPipeInode(child.pid);
+
+      function startWaitingPoll() {
+        waitingPollTimer = setInterval(async () => {
+          if (!child) return;
+          const waiting = await anyDescendantWaitingOnStdin(child.pid, stdinPipeInode);
+          if (waiting !== lastWaitingSent) {
+            lastWaitingSent = waiting;
+            send({ type: 'waiting_input', waiting });
+          }
+        }, 600);
+      }
+      function stopWaitingPoll() {
+        if (waitingPollTimer) clearInterval(waitingPollTimer);
+        waitingPollTimer = null;
+        if (lastWaitingSent) send({ type: 'waiting_input', waiting: false });
+        lastWaitingSent = false;
+      }
+      startWaitingPoll();
+
       child.on('close', (code) => {
+        clearTimeout(idleFlushTimer);
+        stopWaitingPoll();
         // agar tail mein marker bacha reh gaya (last line mein) usko bhi parse karo
         const m = tail.match(new RegExp(`^${EXIT_MARKER}:(-?\\d+):(.*)$`));
         if (m) {
@@ -206,6 +340,8 @@ wss.on('connection', (ws) => {
       });
 
       child.on('error', (err) => {
+        clearTimeout(idleFlushTimer);
+        stopWaitingPoll();
         child = null;
         send({ type: 'error', message: `Process start nahi ho saka: ${err.message}` });
       });

@@ -641,6 +641,23 @@
     padding-left:13px;
   }
   .msg-footer .meta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bridge-inline-actions{
+    margin-top:8px;
+    padding-left:13px;
+  }
+  .bridge-inline-connect-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:8px;
+    padding:8px 14px;
+    cursor:pointer;
+  }
+  .bridge-inline-connect-btn:active{transform:scale(0.96);}
   .msg-copy-btn{
     all:unset;
     box-sizing:border-box;
@@ -658,7 +675,7 @@
   }
   .msg-copy-btn:active{transform:scale(0.94);}
   .msg-copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
-  .row.assistant .wrap{display:flex;flex-direction:column;max-width:82%;}
+  .row.assistant .wrap{display:flex;flex-direction:column;max-width:100%;}
 
   .thinking{
     display:flex;align-items:center;padding-left:13px;padding-top:2px;padding-bottom:2px;
@@ -3062,6 +3079,65 @@
     scrollBottom();
   }
 
+  // ── "Termux connect karo" quick action ─────────────────────────────
+  // Ye deterministic, client-side hi handle hota hai — AI model ko call
+  // karne ki zaroorat nahi, kyunki jawab (connect button ya setup guide)
+  // hamesha same hona chahiye aur localStorage se pakka pata chal sakta
+  // hai ki user pehli baar hai ya returning. Isse model kabhi is baare
+  // mein galat/inconsistent guide bhi nahi bana sakta.
+  function isTermuxConnectIntent(text) {
+    const t = (text || '').toLowerCase();
+    const mentionsBridge = /\btermux\b|\bbridge\b/.test(t);
+    const mentionsConnect = /connect|jod\s*do|jodo|judai|jorho|setup/.test(t);
+    return mentionsBridge && mentionsConnect;
+  }
+
+  const TERMUX_SETUP_GUIDE_MD =
+`Chalo Termux Bridge connect karte hain — pehle Termux app mein ye steps karo:
+
+1. \`pkg install nodejs -y\`
+2. \`mkdir -p ~/chaman-bridge && cd ~/chaman-bridge\`
+3. \`server.js\` aur \`package.json\` files isi folder mein daal do
+4. \`npm install\`
+5. \`npm start\` — pehli baar ek TOKEN print hoga, usko copy kar lo
+6. Neeche button dabaao aur wahi Port/Token paste karke "Save & Connect" dabao
+7. Browser ka "local network access" permission popup allow karna zaroori hai
+8. Termux band/restart hone ke baad dobara \`cd ~/chaman-bridge && npm start\` chalana padega`;
+
+  function addBridgeConnectCard(isReturningUser) {
+    const emptyEl = $main.querySelector('.empty');
+    if (emptyEl) emptyEl.remove();
+
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = renderMarkdown(
+      isReturningUser
+        ? 'Termux Bridge pehle se set up hai — bas connect karna hai.'
+        : TERMUX_SETUP_GUIDE_MD
+    );
+    wrap.appendChild(bubble);
+
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'bridge-inline-actions';
+    const connectBtn = document.createElement('button');
+    connectBtn.type = 'button';
+    connectBtn.className = 'bridge-inline-connect-btn';
+    connectBtn.textContent = isReturningUser ? '🔌 Connect' : '🔌 Setup karke Connect karo';
+    // Same settings modal reuse karte hain (Save & Connect wahi hai) —
+    // returning user ke liye pehle se token/port bhara hua milega.
+    connectBtn.addEventListener('click', () => showBridgeSettingsModal());
+    actionsRow.appendChild(connectBtn);
+    wrap.appendChild(actionsRow);
+
+    row.appendChild(wrap);
+    $main.appendChild(row);
+    scrollBottom(true);
+  }
+
   function addAssistantBubble(text, meta, isError, animate, action, outputFiles) {
     // Backend action-parse fail ho jaaye aur text bhi khaali ho, to poori
     // bubble blank na dikhe (jaisa pehle "Groq · model" + Copy button ke
@@ -3305,6 +3381,18 @@
     if (busy) return;
     if (!text && attachedFiles.length === 0) return;
     if (attachedFiles.some((f) => f.status === 'reading')) return; // file abhi padhi ja rahi hai, thoda ruko
+
+    // Termux-connect quick action — AI ko bypass karke seedha deterministic
+    // UI dikhate hain (isliye ye AI history mein bhi push nahi hota, ye
+    // sirf ek shortcut hai, real conversation turn nahi).
+    if (text && attachedFiles.length === 0 && isTermuxConnectIntent(text)) {
+      addUserBubble(text, []);
+      $input.value = '';
+      $input.style.height = 'auto';
+      const cfg = loadBridgeConfig();
+      addBridgeConnectCard(!!(cfg && cfg.token));
+      return;
+    }
 
     const filesMeta = attachedFiles.map((f) => ({ name: f.name, kind: f.kind, status: f.status }));
     const outgoing = buildOutgoingMessage(text, attachedFiles);
