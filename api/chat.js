@@ -181,8 +181,14 @@ function extractAction(text) {
   const cleanText = text.replace(full, '').trim();
 
   if (!PROTOCOLS[name]) {
-    // Unknown protocol tag — ignore karo, bas text se hata do taaki user ko raw tag na dikhe.
-    return { cleanText, action: null };
+    // Unknown protocol tag — model ne koi aisa action-naam bheja jo registered
+    // nahi hai (typo/hallucination). Pehle isse silently drop kiya jaata tha,
+    // jisse cleanText khaali reh jaata tha aur user ko bilkul blank bubble
+    // dikhta tha (koi text, koi error, kuch nahi). Ab: log karo taaki wajah
+    // pata chale, aur cleanText khaali ho to original text hi fallback ke
+    // tor pe wapas do (raw tag samet) — kam se kam kuch dikhega.
+    console.error(`[extractAction] Unknown protocol "${name}" — raw tag:`, full);
+    return { cleanText: cleanText || text, action: null };
   }
 
   try {
@@ -222,11 +228,32 @@ async function withTimeout(promise, ms) {
   }
 }
 
-function toOpenAIMessages(messages) {
-  return [{ role: 'system', content: SYSTEM_PROMPT + buildProtocolDocs() }, ...messages];
+// Client apna live Bridge.status (WebSocket connection state) bhejta hai —
+// isse model ko GUESS nahi karna padta ki termux connected hai ya nahi, use
+// seedha runtime fact ki tarah pata chal jaata hai. Isse pehle system prompt
+// sirf ye bolta tha "check kar connected hai ya nahi", jo model khud kabhi
+// verify nahi kar sakta tha — ab yahi status har request ke saath fresh milta hai.
+const VALID_TERMUX_STATUSES = new Set(['connected', 'disconnected', 'connecting', 'denied']);
+
+function termuxStatusNote(termuxStatus) {
+  const status = VALID_TERMUX_STATUSES.has(termuxStatus) ? termuxStatus : 'disconnected';
+  const lines = {
+    connected: 'CONNECTED hai abhi — [ACTION:termux_run] seedha bhej sakta hai, bridge-connect karwane ki zaroorat nahi.',
+    connecting: 'CONNECT ho raha hai (in-progress) — [ACTION:termux_run] bhejne se pehle thoda wait karne ko bol, ya user se poochh ki connection complete hua ya nahi.',
+    denied: 'DENIED hai (browser ne local-network permission allow nahi ki) — [ACTION:termux_run] mat bhej, user ko bata de ki browser permission dobara allow karni padegi (Settings → Termux Bridge → dobara Save & Connect try kare).',
+    disconnected: 'DISCONNECTED hai abhi — [ACTION:termux_run] mat bhej, pehle user ko bridge connect/setup karwa (Settings → Termux Bridge).',
+  };
+  return `\n\n═══ LIVE TERMUX BRIDGE STATUS (is exact request ke waqt) ═══\nTermux Bridge abhi ${lines[status]}\nYe status har request ke saath fresh aata hai (client ke apne live WebSocket state se) — isliye "connected hai ya nahi" khud guess/assume kabhi mat kar, hamesha isi upar wali line ko sach maan.`;
 }
 
-async function callOpenAICompatible({ url, key, model, messages, extraHeaders = {} }) {
+function toOpenAIMessages(messages, termuxStatus) {
+  return [
+    { role: 'system', content: SYSTEM_PROMPT + buildProtocolDocs() + termuxStatusNote(termuxStatus) },
+    ...messages,
+  ];
+}
+
+async function callOpenAICompatible({ url, key, model, messages, termuxStatus, extraHeaders = {} }) {
   return withTimeout(async (signal) => {
     const r = await fetch(url, {
       method: 'POST',
@@ -238,7 +265,7 @@ async function callOpenAICompatible({ url, key, model, messages, extraHeaders = 
       },
       body: JSON.stringify({
         model,
-        messages: toOpenAIMessages(messages),
+        messages: toOpenAIMessages(messages, termuxStatus),
         temperature: 0.7,
       }),
     });
@@ -257,23 +284,25 @@ const PROVIDERS = [
   {
     name: 'Groq',
     envKey: 'GROQ_API_KEY',
-    run: (key, messages) =>
+    run: (key, messages, termuxStatus) =>
       callOpenAICompatible({
         url: 'https://api.groq.com/openai/v1/chat/completions',
         key,
         model: 'openai/gpt-oss-120b',
         messages,
+        termuxStatus,
       }),
   },
   {
     name: 'OpenRouter',
     envKey: 'OPENROUTER_API_KEY',
-    run: (key, messages) =>
+    run: (key, messages, termuxStatus) =>
       callOpenAICompatible({
         url: 'https://openrouter.ai/api/v1/chat/completions',
         key,
         model: 'openrouter/free', // auto-routes to whichever free model is currently up
         messages,
+        termuxStatus,
         extraHeaders: {
           'HTTP-Referer': 'https://chaman-ai.vercel.app',
           'X-Title': 'Chaman AI',
@@ -283,23 +312,25 @@ const PROVIDERS = [
   {
     name: 'Cerebras',
     envKey: 'CEREBRAS_API_KEY',
-    run: (key, messages) =>
+    run: (key, messages, termuxStatus) =>
       callOpenAICompatible({
         url: 'https://api.cerebras.ai/v1/chat/completions',
         key,
         model: 'llama-3.3-70b',
         messages,
+        termuxStatus,
       }),
   },
   {
     name: 'Mistral',
     envKey: 'MISTRAL_API_KEY',
-    run: (key, messages) =>
+    run: (key, messages, termuxStatus) =>
       callOpenAICompatible({
         url: 'https://api.mistral.ai/v1/chat/completions',
         key,
         model: 'mistral-small-latest',
         messages,
+        termuxStatus,
       }),
   },
 ];
@@ -361,14 +392,14 @@ function formatSearchResultsForModel(query, results) {
 // mein "search chal rahi hai" animation dikha sakta hai, sirf baad mein nahi.
 const MAX_TOOL_ITERATIONS = 3;
 
-async function runProviderWithActions(provider, key, initialMessages, onStatus) {
+async function runProviderWithActions(provider, key, initialMessages, onStatus, termuxStatus) {
   let messages = initialMessages;
   let lastText = '';
   let lastModel = '';
   const emit = typeof onStatus === 'function' ? onStatus : () => {};
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
-    const { text, model } = await provider.run(key, messages);
+    const { text, model } = await provider.run(key, messages, termuxStatus);
     lastText = text;
     lastModel = model;
 
@@ -438,6 +469,9 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'messages array chahiye' });
     return;
   }
+  // Client apna live Bridge.status bhejta hai (connected/disconnected/connecting/denied)
+  // — isse model ko har request ke saath fresh, verified fact milta hai.
+  const termuxStatus = typeof body?.termuxStatus === 'string' ? body.termuxStatus : 'disconnected';
 
   // Ab yahan se response ek NDJSON stream hai (ek line = ek JSON event), taaki
   // web_search ke live phases ({type:'status', phase:'searching'|'found'|
@@ -468,7 +502,7 @@ export default async function handler(req, res) {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       try {
-        const { text, model, action } = await runProviderWithActions(provider, key, messages, emitStatus);
+        const { text, model, action } = await runProviderWithActions(provider, key, messages, emitStatus, termuxStatus);
         write({ type: 'final', reply: text, provider: provider.name, model, action });
         res.end();
         return;

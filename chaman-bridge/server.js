@@ -195,6 +195,51 @@ function checkAuth(req) {
 
 const EXIT_MARKER = '__CHAMAN_EXIT__';
 
+// ── Background-safe execution state (MODULE-level, NAHI per-connection) ──────
+// Pehle `cwd`/`child` `wss.on('connection', ...)` ke andar per-connection
+// variables the — isliye jab bhi WS disconnect hota (tab close, phone lock,
+// app switch, network blip), `ws.on('close')` seedha `killChildGroup(child)`
+// chala deta aur chal rahi command (jaise koi video download) turant mar
+// jaati thi. Ab command state kisi ek connection se bandhi nahi hai: browser
+// reconnect karke isi chalti hui command se wapas jud sakta hai.
+let cwd = process.cwd();
+let child = null;
+let activeWs = null; // is waqt jo bhi client "watch" kar raha hai — sab tabs band ho jayein to null
+
+// Command chalte waqt hue saare events (started/output/waiting_input/exit) yahan
+// bhi store hote hain, taaki koi naya/reconnecting client turant "catch up" ho sake.
+// Size-capped hai taaki bahut lambi output (jaise ffmpeg progress spam) memory na khaye.
+const OUTPUT_BUFFER_MAX_BYTES = 500_000; // ~500KB
+let outputBuffer = [];
+let outputBufferBytes = 0;
+
+function resetOutputBuffer() {
+  outputBuffer = [];
+  outputBufferBytes = 0;
+}
+
+function pushToBuffer(event) {
+  const size = JSON.stringify(event).length;
+  outputBuffer.push(event);
+  outputBufferBytes += size;
+  while (outputBufferBytes > OUTPUT_BUFFER_MAX_BYTES && outputBuffer.length > 1) {
+    const removed = outputBuffer.shift();
+    outputBufferBytes -= JSON.stringify(removed).length;
+  }
+}
+
+// Command-lifecycle events (started/output/waiting_input/exit) is se jaate hain —
+// buffer mein bhi save hote hain (future reconnect ke liye) AUR abhi jo bhi
+// "active watcher" hai use turant bhi mil jaate hain. Connection-specific
+// messages (ready, reattach, per-request errors) isse nahi jaate — wo seedha
+// us ek connection ke apne `send()` se jaate hain.
+function broadcast(event) {
+  pushToBuffer(event);
+  if (activeWs) {
+    try { activeWs.send(JSON.stringify(event)); } catch { /* socket closed */ }
+  }
+}
+
 const httpServer = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
@@ -241,14 +286,24 @@ httpServer.on('upgrade', (req, socket, head) => {
 });
 
 wss.on('connection', (ws) => {
-  let cwd = process.cwd();
-  let child = null;
+  // Naya connection turant "active watcher" ban jaata hai — agar pehle koi
+  // dusra tab watch kar raha tha, wo ab bas naya output nahi paayega (uska
+  // apna WS abhi bhi khula reh sakta hai, koi harm nahi), aur command khud
+  // bilkul unaffected chalti rehti hai.
+  activeWs = ws;
 
   const send = (obj) => {
     try { ws.send(JSON.stringify(obj)); } catch { /* socket closed */ }
   };
 
   probeTools().then((tools) => send({ type: 'ready', cwd, tools, host: os.hostname() }));
+
+  // Agar koi command already (pichhle connection se) chal rahi hai, to naye
+  // client ko turant uska poora buffered output "catch-up" ke tor pe bhej do —
+  // jaise use kuch miss hi nahi hua.
+  if (child || outputBuffer.length) {
+    send({ type: 'reattach', running: !!child, cwd, buffer: outputBuffer });
+  }
 
   ws.on('message', async (raw) => {
     let msg;
@@ -266,7 +321,8 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      send({ type: 'started', command });
+      resetOutputBuffer();
+      broadcast({ type: 'started', command });
 
       // cwd persist karne ke liye: command ke baad hi ek exit-marker aur naya
       // pwd bhi print karwa dete hain, phir output se strip kar dete hain.
@@ -304,7 +360,7 @@ wss.on('connection', (ws) => {
         clearTimeout(idleFlushTimer);
         idleFlushTimer = setTimeout(() => {
           if (tail && !couldStillBecomeMarker(tail)) {
-            send({ type: 'output', stream: streamName, data: tail });
+            broadcast({ type: 'output', stream: streamName, data: tail });
             tail = '';
           }
         }, IDLE_FLUSH_MS);
@@ -320,7 +376,7 @@ wss.on('connection', (ws) => {
             cwd = m[2] || cwd;
             continue; // marker line khud user ko nahi dikhani
           }
-          send({ type: 'output', stream: streamName, data: line + '\n' });
+          broadcast({ type: 'output', stream: streamName, data: line + '\n' });
         }
         // Jo bacha (bina newline ke) hai, use bhi thodi der baad live dikha do —
         // taaki koi bhi interactive prompt ("Continue? [y/n] ", "Password: ")
@@ -342,14 +398,14 @@ wss.on('connection', (ws) => {
           const waiting = await anyDescendantWaitingOnStdin(child.pid, stdinPipeInode);
           if (waiting !== lastWaitingSent) {
             lastWaitingSent = waiting;
-            send({ type: 'waiting_input', waiting });
+            broadcast({ type: 'waiting_input', waiting });
           }
         }, 600);
       }
       function stopWaitingPoll() {
         if (waitingPollTimer) clearInterval(waitingPollTimer);
         waitingPollTimer = null;
-        if (lastWaitingSent) send({ type: 'waiting_input', waiting: false });
+        if (lastWaitingSent) broadcast({ type: 'waiting_input', waiting: false });
         lastWaitingSent = false;
       }
       startWaitingPoll();
@@ -362,18 +418,18 @@ wss.on('connection', (ws) => {
         if (m) {
           cwd = m[2] || cwd;
         } else if (tail) {
-          send({ type: 'output', stream: 'stdout', data: tail });
+          broadcast({ type: 'output', stream: 'stdout', data: tail });
         }
         tail = '';
         child = null;
-        send({ type: 'exit', code, cwd });
+        broadcast({ type: 'exit', code, cwd });
       });
 
       child.on('error', (err) => {
         clearTimeout(idleFlushTimer);
         stopWaitingPoll();
         child = null;
-        send({ type: 'error', message: `Process start nahi ho saka: ${err.message}` });
+        broadcast({ type: 'error', message: `Process start nahi ho saka: ${err.message}` });
       });
     }
 
@@ -391,7 +447,15 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    killChildGroup(child);
+    // ★ CORE FIX: pehle yahan `killChildGroup(child)` chalta tha — matlab
+    // koi bhi disconnect (tab close, phone lock, app switch, network blip)
+    // turant chal rahi command (jaise koi video download) ko maar deta tha.
+    // Ab hum command ko chalte hi rehne dete hain — bas is connection ko
+    // "active watcher" se hata dete hain. Agar koi naya tab/reconnect aata
+    // hai, wo activeWs ban jaata hai aur buffered output se turant catch-up
+    // ho jaata hai. Command ko rokna ab sirf explicit {type:'kill'} message
+    // se hi hota hai (user ka apna "■ Stop" button dabana).
+    if (activeWs === ws) activeWs = null;
   });
 });
 

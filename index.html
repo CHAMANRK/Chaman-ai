@@ -1539,6 +1539,31 @@
     },
 
     dispatch(msg) {
+      // ★ 'reattach' — server ne bataya ki koi command background mein pehle
+      // se chal rahi thi (ya abhi khatam hui) jab hum disconnect the. Agar
+      // isi tab mein pehle se ek runner card (`_current`) attached hai
+      // (jaise phone thodi der lock hua tha aur WS drop hua, lekin tab
+      // band nahi hua), to buffered events usi card mein replay kar do —
+      // bilkul aisa jaise kuch miss hi nahi hua. Agar `_current` hi nahi hai
+      // (poora app reopen hua), to ek chhota system-message dikha do taaki
+      // user ko pata chale ki background mein kuch chal/khatam hua tha.
+      if (msg.type === 'reattach') {
+        if (this._current && Array.isArray(msg.buffer)) {
+          for (const buffered of msg.buffer) this.dispatch(buffered);
+        } else if (Array.isArray(msg.buffer) && msg.buffer.length) {
+          const tail = msg.buffer
+            .filter((e) => e.type === 'output')
+            .map((e) => e.data)
+            .join('')
+            .slice(-1500);
+          const exitEvt = msg.buffer.find((e) => e.type === 'exit');
+          const statusLine = msg.running
+            ? '⚙ Termux Bridge: ek command abhi bhi background mein chal rahi thi jab tu disconnect tha — reconnect ho gaya, ye ab tak ka output hai:'
+            : `⚙ Termux Bridge: background mein chal rahi command tab tak khatam ho chuki thi (exit code ${exitEvt ? exitEvt.code : '?'}) — ye uska aakhri output hai:`;
+          addAssistantBubble(`${statusLine}\n\n\`\`\`\n${tail || '(koi output record nahi mila)'}\n\`\`\``, null, false, false);
+        }
+        return;
+      }
       const runner = this._current;
       if (!runner) return;
       if (msg.type === 'output') runner.onOutput(msg.stream, msg.data);
@@ -3723,7 +3748,7 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, termuxStatus: Bridge.status }),
       });
 
       let finalEvent = null;
