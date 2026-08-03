@@ -11,11 +11,9 @@
   confirm karo (icon ke page pe "meta-og:image" / Download button se), phir
   hi use karo.
 
-  ★ ABHI KE OPEN ITEMS: LED style ek chhota icon-set hai (mostly tech/circuit-
-  themed icons), isliye kuch icons (gear/settings, edit/pencil, trash/delete,
-  plus, back-arrow) ke liye LED version verify nahi ho paya hai — abhi
-  temporarily Dotty URLs pe hi hain (neeche "TODO(icon-rule)" comments dekho).
-  Jab bhi in ka LED version mile (ya Najeef confirm kare), replace kar dena.
+  ★ EXCEPTIONS (Najeef confirm kiya hai): "search" aur "python" icons ke liye
+  LED set mein exact match nahi mila, isliye Dotty ("window-search") aur
+  Wired ("python") style temporarily use ho rahe hai. Baaki poori app LED hai.
 -->
 <html lang="hi">
 <head>
@@ -755,6 +753,7 @@
     animation:search-scan 1.1s ease-in-out infinite;
     transform-origin:70% 70%;
   }
+  .search-status .glass img{width:16px;height:16px;display:block;}
   @keyframes search-scan{
     0%,100%{transform:rotate(-10deg) scale(1);}
     50%{transform:rotate(10deg) scale(1.18);}
@@ -1120,6 +1119,18 @@
   }
   .output-file-download svg{width:16px; height:16px;}
   .output-file-card:active .output-file-download{background:var(--amber); color:var(--ink);}
+  .output-file-badge{
+    flex:0 0 auto;
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:3px 7px;
+    border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .output-file-badge.modified{background:rgba(232,163,61,.15); color:var(--amber);}
+  .output-file-badge.new{background:rgba(124,148,115,.18); color:var(--sage);}
 
   /* ── Quran Quiz card — [ACTION:quran_quiz_start] ── */
   .quiz-card{
@@ -1248,13 +1259,14 @@
   button:disabled{opacity:.4;cursor:not-allowed;}
   button:active:not(:disabled){transform:scale(0.94);}
   #send img{width:20px;height:20px;display:block;}
+  .inline-icon{width:14px;height:14px;vertical-align:-2px;display:inline-block;margin-right:2px;}
 </style>
 </head>
 <body>
 
 <header>
   <button id="menuBtn" class="icon-btn" aria-label="Menu" type="button">
-    <span class="burger"><span></span><span></span><span></span></span>
+    <img src="https://img.icons8.com/led/32/activity-feed.png" alt="Menu">
   </button>
   <div class="chain" id="chain">
     <div class="dot" data-provider="Groq"></div>
@@ -1271,16 +1283,14 @@
     <span class="drawer-title">Chaman AI</span>
   </div>
   <button id="newChatBtn" class="new-chat-btn" type="button">
-    <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — plus icon ke liye LED URL confirm karke replace karo -->
-    <img src="https://img.icons8.com/dotty/96/plus-math.png" alt="">
+    <img src="https://img.icons8.com/led/32/filled-plus-2-math.png" alt="">
     <span>Naya chat</span>
   </button>
   <div class="drawer-label">Sessions</div>
   <div id="sessionList" class="session-list"></div>
   <div class="drawer-footer">
     <button id="settingsBtn" class="drawer-footer-btn" type="button">
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — gear/settings icon ke liye LED URL confirm karke replace karo -->
-      <img src="https://img.icons8.com/dotty/96/gear.png" alt="">
+      <img src="https://img.icons8.com/led/32/automatic.png" alt="">
       <span>Settings</span>
     </button>
   </div>
@@ -1292,8 +1302,7 @@
 <div id="settingsPage" class="settings-page">
   <div class="settings-header">
     <button id="settingsBackBtn" class="icon-btn" aria-label="Wapas jao" type="button">
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — back icon ke liye LED URL confirm karke replace karo -->
-      <img src="https://img.icons8.com/dotty/80/return.png" alt="">
+      <img src="https://img.icons8.com/led/32/circled-chevron-left.png" alt="">
     </button>
     <span class="settings-title">Settings</span>
   </div>
@@ -1304,8 +1313,7 @@
         <span class="settings-row-title">Naam</span>
         <span class="settings-row-value" id="profileNameDisplay">—</span>
       </div>
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
-      <span class="settings-row-arrow"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span>
     </button>
 
     <div class="drawer-label" style="margin-top:18px;">Termux Bridge</div>
@@ -1314,8 +1322,7 @@
         <span class="settings-row-title">Status</span>
         <span class="settings-row-value" id="bridgeStatusDisplay">Disconnected</span>
       </div>
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
-      <span class="settings-row-arrow"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span>
     </button>
     <!-- Aage aur settings groups (jaise Appearance, Notifications, Data,
          About, etc.) yahin isi neeche add honge -->
@@ -1368,8 +1375,7 @@
   <div id="attachChips" class="attach-chips"></div>
   <div class="input-row">
     <button id="attachBtn" class="attach-btn" type="button" aria-label="File attach karo">
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — plus icon ke liye LED URL confirm karke replace karo -->
-      <img src="https://img.icons8.com/dotty/96/plus-math.png" alt="">
+        <img src="https://img.icons8.com/led/32/filled-plus-2-math.png" alt="">
     </button>
     <input id="fileInput" type="file" multiple accept="*/*" style="display:none">
     <textarea id="input" rows="1" placeholder="Type kar..." autocomplete="off"></textarea>
@@ -2013,16 +2019,14 @@
       const renameBtn = document.createElement('button');
       renameBtn.type = 'button';
       renameBtn.className = 'app-modal-btn';
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — edit icon ke liye LED URL confirm karke replace karo -->
-      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/dotty/96/edit.png" alt=""></span><span>Rename</span>';
+      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span><span>Rename</span>';
       renameBtn.addEventListener('click', () => showRenameModal(id));
       root.appendChild(renameBtn);
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'app-modal-btn danger';
-      <!-- TODO(icon-rule): abhi Dotty hai (LED version verify nahi hua) — trash icon ke liye LED URL confirm karke replace karo -->
-      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/dotty/96/filled-trash.png" alt=""></span><span>Delete</span>';
+      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/led/32/delete-forever.png" alt=""></span><span>Delete</span>';
       delBtn.addEventListener('click', () => showDeleteModal(id));
       root.appendChild(delBtn);
     });
@@ -2561,7 +2565,7 @@
     row.className = 'row assistant';
     row.innerHTML = `
       <div class="search-status">
-        <span class="glass">🔍</span>
+        <span class="glass"><img src="https://img.icons8.com/dotty/32/window-search.png" alt="search"></span>
         <span class="status-text"></span>
         <span class="scan-bar"></span>
       </div>`;
@@ -2579,19 +2583,19 @@
 
     if (phase === 'searching') {
       box.className = 'search-status';
-      glass.textContent = '🔍';
+      glass.innerHTML = '<img src="https://img.icons8.com/dotty/32/window-search.png" alt="search">';
       textEl.innerHTML = `"${escapeHtml(query || '')}" search kar raha hoon<span class="dots"></span>`;
     } else if (phase === 'found') {
       box.className = 'search-status found';
-      glass.textContent = '✅';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/ok.png" alt="done">';
       textEl.textContent = `${count} results mile — jawab bana raha hoon`;
     } else if (phase === 'search_failed') {
       box.className = 'search-status failed';
-      glass.textContent = '⚠️';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/box-important.png" alt="warning">';
       textEl.textContent = 'Live search fail ho gaya — apni knowledge se jawab de raha hoon';
     } else if (phase === 'answering') {
       box.className = 'search-status found';
-      glass.textContent = '✍️';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/edit.png" alt="writing">';
       textEl.innerHTML = `Jawab likh raha hoon<span class="dots"></span>`;
     }
     scrollBottom();
@@ -2604,7 +2608,7 @@
     row.className = 'row assistant';
     row.innerHTML = `
       <div class="search-status">
-        <span class="glass">🐍</span>
+        <span class="glass"><img src="https://img.icons8.com/wired/32/python.png" alt="python"></span>
         <span class="status-text"></span>
         <span class="scan-bar"></span>
       </div>`;
@@ -2613,24 +2617,37 @@
     return row;
   }
 
-  function updateCodeStatus(row, phase) {
+  function updateCodeStatus(row, phase, detail) {
     if (!row) return;
     const box = row.querySelector('.search-status');
     const glass = row.querySelector('.glass');
     const textEl = row.querySelector('.status-text');
     if (!box) return;
+    const d = detail ? escapeHtml(detail) : '';
 
     if (phase === 'running') {
       box.className = 'search-status';
-      glass.textContent = '🐍';
+      glass.innerHTML = '<img src="https://img.icons8.com/wired/32/python.png" alt="python">';
       textEl.innerHTML = `Python code sandbox mein chala raha hoon<span class="dots"></span>`;
+    } else if (phase === 'reading') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/insert-page.png" alt="reading">';
+      textEl.innerHTML = `"${d}" padh raha hoon<span class="dots"></span>`;
+    } else if (phase === 'writing') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/edit.png" alt="writing">';
+      textEl.innerHTML = `"${d}" likh raha hoon<span class="dots"></span>`;
+    } else if (phase === 'installing') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/automatic.png" alt="installing">';
+      textEl.innerHTML = `"${d}" package install kar raha hoon<span class="dots"></span>`;
     } else if (phase === 'done') {
       box.className = 'search-status found';
-      glass.textContent = '✅';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/ok.png" alt="done">';
       textEl.textContent = 'Code chal gaya — jawab bana raha hoon';
     } else if (phase === 'failed') {
       box.className = 'search-status failed';
-      glass.textContent = '⚠️';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/box-important.png" alt="warning">';
       textEl.textContent = 'Code mein error aayi — model ko bata raha hoon';
     }
     scrollBottom();
@@ -2645,7 +2662,62 @@
   const PYODIDE_WORKER_SRC = `
     importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
     let pyodideReadyPromise = loadPyodide();
+    // ── 3-folder convention ──────────────────────────────────────────────
+    // uploads/  → user ne jo bhi files attach ki hain, unka pristine copy
+    //             (har run se pehle sandboxFiles se fresh seed hota hai).
+    // modify/   → wahi attached files ki EDITABLE working copy — code
+    //             isi folder mein same filename se save kare to wo
+    //             "Modified: <naam>" ban ke user ko dikhta hai.
+    // outputs/  → bilkul NAYI files (jo kisi upload se related nahi) —
+    //             "New: <naam>" ban ke dikhti hain. Har run se pehle
+    //             clear hota hai, isliye jo bhi ismein bache wo hamesha
+    //             isi run ki hi output hoti hai.
     const SANDBOX_DIR = '/sandbox';
+    const DIR_UPLOADS = SANDBOX_DIR + '/uploads';
+    const DIR_MODIFY = SANDBOX_DIR + '/modify';
+    const DIR_OUTPUTS = SANDBOX_DIR + '/outputs';
+    let currentMsgId = null; // jis run ke liye abhi progress bhejni hai
+
+    function notifyProgress(phase, detail) {
+      if (currentMsgId === null) return;
+      self.postMessage({ id: currentMsgId, progress: true, phase, detail: detail == null ? '' : String(detail) });
+    }
+
+    // Ek baar (worker load hote hi) builtins.open aur micropip.install ko
+    // monkey-patch kar dete hain, taaki HAR run mein — chahe model ne khud
+    // koi status na maanga ho — hume pata chale ki code kab kis file ko
+    // padh/likh raha hai ya kaunsa package install kar raha hai. Ye "guess"
+    // nahi hai — asli execution ke waqt hi ye calls fire hoti hain, isliye
+    // order/timing 100% sahi hota hai (Claude ke "Reading file..." jaisa).
+    async function patchIntrospection(pyodide) {
+      pyodide.globals.set('_notify_progress', notifyProgress);
+      await pyodide.runPythonAsync(\`
+import builtins
+
+_orig_open = builtins.open
+def _patched_open(file, mode='r', *args, **kwargs):
+    try:
+        is_write = any(c in mode for c in ('w', 'a', 'x', '+'))
+        _notify_progress('writing' if is_write else 'reading', str(file))
+    except Exception:
+        pass
+    return _orig_open(file, mode, *args, **kwargs)
+builtins.open = _patched_open
+
+import micropip
+_orig_install = micropip.install
+async def _patched_install(requirements, *args, **kwargs):
+    try:
+        name = requirements if isinstance(requirements, str) else ', '.join(requirements)
+        _notify_progress('installing', name)
+    except Exception:
+        pass
+    return await _orig_install(requirements, *args, **kwargs)
+micropip.install = _patched_install
+\`);
+    }
+
+    let introspectionReady = false;
 
     self.onmessage = async (e) => {
       const { id, code, inputFiles } = e.data;
@@ -2656,50 +2728,86 @@
         pyodide.setStdout({ batched: (s) => write(s + '\\n') });
         pyodide.setStderr({ batched: (s) => write(s + '\\n') });
 
+        if (!introspectionReady) {
+          await patchIntrospection(pyodide);
+          introspectionReady = true;
+        }
+
         try { pyodide.FS.mkdir(SANDBOX_DIR); } catch (e2) { /* already exists */ }
+        try { pyodide.FS.mkdir(DIR_UPLOADS); } catch (e2) { /* already exists */ }
+        try { pyodide.FS.mkdir(DIR_MODIFY); } catch (e2) { /* already exists */ }
+        try { pyodide.FS.mkdir(DIR_OUTPUTS); } catch (e2) { /* already exists */ }
+        // Root pe chdir karte hain (uploads/DIR_MODIFY nahi) taaki code
+        // "uploads/x", "modify/x", "outputs/x" jaise relative paths use kar sake.
         pyodide.FS.chdir(SANDBOX_DIR);
 
-        // Attached files ko sandbox mein unke original naam se rakh do,
-        // taaki code seedha open("filename.ext") se padh sake.
-        const before = new Set();
-        try {
-          for (const f of pyodide.FS.readdir(SANDBOX_DIR)) {
-            if (f === '.' || f === '..') continue;
-            before.add(f);
-          }
-        } catch (e3) { /* ignore */ }
-
+        // uploads/ + modify/ ko HAR run se pehle sandboxFiles (jo attach ki gayi
+        // files aur pichle runs ke "modified" output ka latest content hai) se
+        // fresh seed karte hain — taaki code hamesha up-to-date content dekhe.
+        const modifySnapshot = {}; // name -> content, run se PEHLE ka state (diff ke liye)
         if (inputFiles && typeof inputFiles === 'object') {
           for (const [name, content] of Object.entries(inputFiles)) {
+            try { pyodide.FS.writeFile(DIR_UPLOADS + '/' + name, content); } catch (werr) { /* skip bad filename */ }
             try {
-              pyodide.FS.writeFile(name, content);
-              before.add(name); // input files ko "output" mein dobara mat gino
+              pyodide.FS.writeFile(DIR_MODIFY + '/' + name, content);
+              modifySnapshot[name] = content;
             } catch (werr) { /* skip bad filename */ }
           }
         }
+
+        // outputs/ ko har run se pehle poori tarah khaali kar dete hain, taaki
+        // run ke baad jo bhi ismein mile, wo GUARANTEED isi run ki hi output ho.
+        try {
+          for (const f of pyodide.FS.readdir(DIR_OUTPUTS)) {
+            if (f === '.' || f === '..') continue;
+            try { pyodide.FS.unlink(DIR_OUTPUTS + '/' + f); } catch (e4) { /* ignore */ }
+          }
+        } catch (e5) { /* ignore */ }
+
+        currentMsgId = id;
+        notifyProgress('running', '');
 
         try {
           const result = await pyodide.runPythonAsync(code);
           const resultStr = (result === undefined || result === null) ? '' : String(result);
 
-          // Run ke baad directory dekho — jo bhi naya/change hua, wahi "output files" hain.
           const outputFiles = [];
+
+          // modify/ — jo bhi file naya hai ya seed-content se alag hai, wo
+          // "Modified" output hai (existing attached file update hui, ya
+          // seedha modify/ mein hi ek nayi file bana di gayi).
           try {
-            for (const f of pyodide.FS.readdir(SANDBOX_DIR)) {
+            for (const f of pyodide.FS.readdir(DIR_MODIFY)) {
               if (f === '.' || f === '..') continue;
-              if (before.has(f)) continue;
               try {
-                const data = pyodide.FS.readFile(f, { encoding: 'utf8' });
-                outputFiles.push({ name: f, content: data });
+                const data = pyodide.FS.readFile(DIR_MODIFY + '/' + f, { encoding: 'utf8' });
+                if (!(f in modifySnapshot) || modifySnapshot[f] !== data) {
+                  outputFiles.push({ name: f, path: 'modify/' + f, kind: 'modified', content: data });
+                }
               } catch (readErr) { /* binary ya unreadable — skip (text-only support abhi) */ }
             }
           } catch (listErr) { /* ignore */ }
 
+          // outputs/ — outputs/ run se pehle khaali kiya tha, isliye jo bhi
+          // ismein mile wo hamesha ek bilkul NAYI file hai.
+          try {
+            for (const f of pyodide.FS.readdir(DIR_OUTPUTS)) {
+              if (f === '.' || f === '..') continue;
+              try {
+                const data = pyodide.FS.readFile(DIR_OUTPUTS + '/' + f, { encoding: 'utf8' });
+                outputFiles.push({ name: f, path: 'outputs/' + f, kind: 'new', content: data });
+              } catch (readErr) { /* binary ya unreadable — skip (text-only support abhi) */ }
+            }
+          } catch (listErr) { /* ignore */ }
+
+          currentMsgId = null;
           self.postMessage({ id, ok: true, stdout, result: resultStr, outputFiles });
         } catch (runErr) {
+          currentMsgId = null;
           self.postMessage({ id, ok: false, stdout, error: String(runErr) });
         }
       } catch (loadErr) {
+        currentMsgId = null;
         self.postMessage({ id, ok: false, stdout, error: 'Sandbox load fail hua: ' + String(loadErr) });
       }
     };
@@ -2725,7 +2833,11 @@
   // { ok, stdout, result?, error?, outputFiles? } return karta hai. Kabhi reject
   // nahi hota — timeout/crash bhi ek "ok:false" result ki tarah resolve hota hai,
   // taaki caller loop mein hamesha aage badh sake.
-  function runPythonSandboxed(code) {
+  // onProgress(phase, detail) — optional callback, worker se aane wale live
+  // "reading/writing/installing/running" progress events ke liye. Ye final
+  // result se ALAG hai — bas UI update karne ke liye hai, promise isi se
+  // settle/resolve nahi hoti.
+  function runPythonSandboxed(code, onProgress) {
     return new Promise((resolve) => {
       const worker = getPyWorker();
       const id = ++pyMsgId;
@@ -2740,6 +2852,10 @@
 
       function onMsg(e) {
         if (!e.data || e.data.id !== id) return;
+        if (e.data.progress) {
+          if (typeof onProgress === 'function') onProgress(e.data.phase, e.data.detail);
+          return; // progress event — promise abhi settle nahi karni
+        }
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -2757,8 +2873,13 @@
     if (result.ok) {
       const out = (result.stdout || '').trim();
       const resultLine = result.result ? `\nReturn value: ${result.result}` : '';
-      const filesLine = (Array.isArray(result.outputFiles) && result.outputFiles.length)
-        ? `\nNayi files ban gayin (user ko already download button ki tarah dikh rahi hain, tujhe sirf naam mention karna hai, content dobara mat likh): ${result.outputFiles.map(f => f.name).join(', ')}`
+      const modifiedFiles = (result.outputFiles || []).filter((f) => f.kind === 'modified');
+      const newFiles = (result.outputFiles || []).filter((f) => f.kind !== 'modified');
+      const fileBits = [];
+      if (modifiedFiles.length) fileBits.push(`Modify hui files (existing attached file update hui): ${modifiedFiles.map(f => f.name).join(', ')}`);
+      if (newFiles.length) fileBits.push(`Nayi (brand-new) files: ${newFiles.map(f => f.name).join(', ')}`);
+      const filesLine = fileBits.length
+        ? `\n${fileBits.join('\n')}\n(User ko ye files already download button ki tarah "Modified"/"New" card mein dikh rahi hain — tujhe sirf naam mention karna hai, content dobara mat likh.)`
         : `\nKOI FILE CREATE/SAVE NAHI HUI iss run mein. Agar user ne file maangi thi, to "file ban gayi"/"successfully create ho gayi"/"download button de diya" jaisa KABHI mat bol — saaf bata ki file nahi bani (code mein likhna reh gaya, ya path/filename galat tha, ya error aayi), aur agar zaroorat ho to sahi kiya hua code doosri baar bhej.`;
       return `[Python code run ho gaya, output:]\n${out || '(koi stdout output nahi tha)'}${resultLine}${filesLine}\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
     }
@@ -3059,7 +3180,9 @@
         stdinRow.style.display = 'none';
         stdinRow.classList.remove('waiting');
         if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
-        exitLine.textContent = code === 0 ? '✓ Exit code 0' : `✗ Exit code ${code}`;
+        exitLine.innerHTML = code === 0
+          ? '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="ok"> Exit code 0'
+          : `<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> Exit code ${code}`;
         exitLine.className = 'exit-line ' + (code === 0 ? 'ok' : 'fail');
         scrollBottom();
         if (!busy) {
@@ -3073,7 +3196,7 @@
         stdinRow.style.display = 'none';
         stdinRow.classList.remove('waiting');
         if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
-        exitLine.textContent = '✗ ' + message;
+        exitLine.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> ' + escapeHtml(message);
         exitLine.className = 'exit-line fail';
         scrollBottom();
       },
@@ -3280,11 +3403,16 @@
       subEl.textContent = `${ext ? ext.toUpperCase() + ' · ' : ''}${formatFileSize(bytes)}`;
       meta.append(nameEl, subEl);
 
+      const kind = f.kind === 'modified' ? 'modified' : 'new';
+      const badge = document.createElement('div');
+      badge.className = `output-file-badge ${kind}`;
+      badge.textContent = kind === 'modified' ? 'Modified' : 'New';
+
       const dl = document.createElement('div');
       dl.className = 'output-file-download';
       dl.innerHTML = downloadIconSvg();
 
-      card.append(icon, meta, dl);
+      card.append(icon, meta, badge, dl);
       card.addEventListener('click', () => {
         const blob = new Blob([f.content], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -3372,7 +3500,7 @@
     card.className = 'quiz-card';
     const eyebrow = document.createElement('div');
     eyebrow.className = 'quiz-card-eyebrow';
-    eyebrow.textContent = `🎯 Quiz · Para ${session.from}–${session.to} · Sawaal ${session.answered + 1}/${session.total}`;
+    eyebrow.innerHTML = `<img class="inline-icon" src="https://img.icons8.com/led/32/goal.png" alt="quiz"> Quiz · Para ${session.from}–${session.to} · Sawaal ${session.answered + 1}/${session.total}`;
     card.appendChild(eyebrow);
 
     const loading = document.createElement('div');
@@ -3468,9 +3596,9 @@
 
       const feedback = document.createElement('div');
       feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
-      feedback.textContent = isCorrect
-        ? `✅ Sahi jawab! Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`
-        : `❌ Galat. Sahi jawab tha — Surah ${verse.surah_name}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`;
+      feedback.innerHTML = isCorrect
+        ? `<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="sahi"> Sahi jawab! Surah ${escapeHtml(verse.surah_name)}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`
+        : `<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="galat"> Galat. Sahi jawab tha — Surah ${escapeHtml(verse.surah_name)}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`;
       card.appendChild(feedback);
       scrollBottom();
 
@@ -3706,7 +3834,9 @@
     const connectBtn = document.createElement('button');
     connectBtn.type = 'button';
     connectBtn.className = 'bridge-inline-connect-btn';
-    connectBtn.textContent = isReturningUser ? '🔌 Connect' : '🔌 Setup karke Connect karo';
+    connectBtn.innerHTML = isReturningUser
+      ? '<img class="inline-icon" src="https://img.icons8.com/led/32/share-2.png" alt="connect"> Connect'
+      : '<img class="inline-icon" src="https://img.icons8.com/led/32/share-2.png" alt="connect"> Setup karke Connect karo';
     // Same settings modal reuse karte hain (Save & Connect wahi hai) —
     // returning user ke liye pehle se token/port bhara hua milega.
     connectBtn.addEventListener('click', () => showBridgeSettingsModal());
@@ -3757,7 +3887,7 @@
       copyBtn.textContent = '⧉ Copy';
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = '✓ Copied';
+          copyBtn.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="copied"> Copied';
           copyBtn.classList.add('copied');
           setTimeout(() => {
             copyBtn.textContent = '⧉ Copy';
@@ -3935,7 +4065,9 @@
 
           const codeRow = addCodeStatus();
           updateCodeStatus(codeRow, 'running');
-          const result = await runPythonSandboxed(code);
+          const result = await runPythonSandboxed(code, (phase, detail) => {
+            updateCodeStatus(codeRow, phase, detail);
+          });
           updateCodeStatus(codeRow, result.ok ? 'done' : 'failed');
           setTimeout(() => codeRow.remove(), 700);
 

@@ -110,9 +110,13 @@ const PROTOCOLS = {
   - "code" mein self-contained Python likh — jo bhi print karna hai, explicitly print() kar (sirf last expression ki value nahi milegi, stdout hi capture hota hai).
   - Ye code SERVER pe nahi, user ke apne browser ke andar ek isolated WASM sandbox (Pyodide) mein chalta hai — koi network ya env-vars access nahi hai, aur 10 second baad automatically timeout ho jaata hai. Sirf pure-Python packages hi kaam karenge, heavy C-extension libraries fail ho sakti hain.
   - ★★★ TERMUX BRIDGE SE ISKA KOI LENA-DENA NAHI HAI ★★★ — ye poori tarah user ke apne BROWSER ke andar (WASM sandbox) chalta hai, kisi bhi device/server/bridge connection ki zaroorat NAHI. "LIVE TERMUX BRIDGE STATUS" note (neeche/end mein diya jaata hai) SIRF [ACTION:termux_run] ke liye relevant hai — [ACTION:run_code] use karne se pehle Termux Bridge ka status kabhi mat check kar, mat mention kar, aur "Bridge disconnected hai isliye file nahi bana sakta" jaisi baat kabhi mat bol — ye do capabilities poori tarah alag/independent hain. Termux Bridge disconnected/denied/connecting kisi bhi state mein ho, [ACTION:run_code] hamesha turant available hai.
-  - FILE READ/WRITE: Agar user ne is conversation mein koi file attach ki hai, wo sandbox ki current working directory mein uske ORIGINAL filename se already maujood hai — seedha open("filename.ext") se padh sakta hai. Agar code koi nayi file usi current directory mein banaye/save kare (jaise open("output.csv","w")), wo automatically extract ho ke user ko ek download button ki tarah dikha di jaayegi — is se related koi extra JSON field nahi bhejni, bas Python mein file likh dena kaafi hai.
-  - Ye action bhi background mein resolve hota hai — bhejne ke baad turant stdout/error (aur agar koi output file bani ho uske naam) ek follow-up message ki tarah milega, phir usi ke base pe user ko final Hinglish answer dena.
-  - ★ SUCCESS SIRF TABHI BOL JAB FILE SACH MEIN BANI HO: follow-up result message mein agar "Nayi files ban gayin" wali line NAHI hai (ya usme jo file chahiye thi uska naam nahi hai), to KABHI "file successfully create ho gayi" ya "download button de diya" jaisa mat bol — iska matlab file nahi bani (code fail hua ya kuch likha hi nahi). Aisi situation mein turant bata de ki file create nahi ho payi, error/reason batao, aur agar possible ho to sahi kiya hua code doosri baar bhej. Kabhi bhi result-message dekhe bina, sirf apne bheje code ke bharose pe "ho gaya"/"successfully" jaisa confident claim mat kar.
+  - FILE READ/WRITE — 3-FOLDER CONVENTION (sandbox root mein teen fixed folders hain, paths hamesha inhi ke andar likh, bina folder-prefix ke seedha "filename.ext" ab kaam NAHI karega):
+    • uploads/<naam>  → agar user ne is conversation mein koi file attach ki hai, uska ORIGINAL content yahan uske asli filename se hamesha maujood hai (read-only reference) — padhne ke liye open("uploads/filename.ext").
+    • modify/<naam>   → kisi ATTACHED/EXISTING file ko edit/update/modify karna ho (jaise ek CSV mein column add karna, ek JSON fix karna), to SAME filename se yahan save kar: open("modify/filename.ext","w"). Ye user ko "Modified: filename.ext" card ki tarah dikhta hai, aur agla run isi updated version ko latest maan ke uploads/+modify/ dono mein seed karega.
+    • outputs/<naam>  → koi BILKUL NAYI file banani ho (jo kisi upload se related nahi, jaise ek naya script/report/downloader), to yahan save kar: open("outputs/filename.ext","w"). Ye user ko "New: filename.ext" card ki tarah dikhta hai.
+    Dono cases mein file automatically extract ho ke user ko download button ki tarah dikha di jaayegi — is se related koi extra JSON field nahi bhejni, bas Python mein sahi folder ke andar file likh dena kaafi hai.
+  - Ye action bhi background mein resolve hota hai — bhejne ke baad turant stdout/error (aur agar koi Modified/New file bani ho uska naam) ek follow-up message ki tarah milega, phir usi ke base pe user ko final Hinglish answer dena.
+  - ★ SUCCESS SIRF TABHI BOL JAB FILE SACH MEIN BANI HO: follow-up result message mein agar "Modify hui files" / "Nayi (brand-new) files" wali koi line NAHI hai (ya usme jo file chahiye thi uska naam nahi hai), to KABHI "file successfully create ho gayi" ya "download button de diya" jaisa mat bol — iska matlab file nahi bani (code fail hua, galat folder mein likhi, ya kuch likha hi nahi). Aisi situation mein turant bata de ki file create nahi ho payi, error/reason batao, aur agar possible ho to sahi kiya hua code doosri baar bhej. Kabhi bhi result-message dekhe bina, sirf apne bheje code ke bharose pe "ho gaya"/"successfully" jaisa confident claim mat kar.
   - Jab ye tag bhej raha ho, sirf yahi tag bhej — koi extra chatter mat likh, ye intermediate step hai.
   - Ek response mein sirf ek [ACTION:run_code] bhej.`,
   },
@@ -175,6 +179,28 @@ function sanitizeJsonLike(raw) {
     .replace(/,\s*([}\]])/g, '$1'); // trailing commas
 }
 
+// Kuch protocols ka payload zyaadatar EK hi bade "free text" field pe depend
+// karta hai (run_code ka "code", termux_run ka "command", web_search ka
+// "query"). Ye wahi fields hain jinme model ke bheje raw Python/shell/text
+// mein literal newlines ya unescaped double-quotes hone ka sabse zyaada
+// chance hai — aur wahi JSON.parse ko sabse zyaada todta hai. In dono
+// upar wale attempts (raw + sanitized) ke fail hone ke baad, ye ek aakhri,
+// targeted recovery hai: hum JSON.parse pe bharosa hi nahi karte — seedha
+// regex se "key": ke baad wali opening-quote se lekar closing-quote (jo
+// akhri "} se pehle wali hai) tak ka poora raw content nikaal lete hain,
+// aur usi ko as-is (literal, koi escape-interpretation ke bina) field ki
+// value bana dete hain. Isse "unescaped newline/quote" wale sabse common
+// case mein bhi payload sahi ban jaata hai, bina model se dobara maange.
+const BIG_FIELD_BY_PROTOCOL = { run_code: 'code', termux_run: 'command', web_search: 'query' };
+
+function repairBigStringField(raw, key) {
+  const cleaned = sanitizeJsonLike(raw);
+  const re = new RegExp('^\\{\\s*"' + key + '"\\s*:\\s*"([\\s\\S]*)"\\s*\\}\\s*$');
+  const m = cleaned.match(re);
+  if (!m) return null;
+  return { [key]: m[1] };
+}
+
 function extractAction(text) {
   const match = text.match(ACTION_REGEX);
   if (!match) return { cleanText: text, action: null };
@@ -182,15 +208,24 @@ function extractAction(text) {
   const [full, name, jsonStr] = match;
   const cleanText = text.replace(full, '').trim();
 
+  // ★ LEAK GUARD: [ACTION:...]{...}[/ACTION] ek internal protocol tag hai —
+  // agar model ne (expected behaviour ke mutabik) SIRF yahi tag bheja tha
+  // aur cleanText khaali hai, to fallback KABHI bhi raw `text` (jisme
+  // poora [ACTION:...]{broken json...} tag literally maujood hai) nahi
+  // hona chahiye — warna raw JSON/action syntax seedha user ke bubble mein
+  // dikh jaata hai. Iski jagah ek generic, user-facing Hinglish message
+  // use karo; raw tag/JSON sirf console.error mein (debugging ke liye) jaata hai.
+  const SAFE_FALLBACK_TEXT = 'Kuch gadbad ho gayi (internal action process nahi ho paaya) — dobara try kar raha hoon.';
+
   if (!PROTOCOLS[name]) {
     // Unknown protocol tag — model ne koi aisa action-naam bheja jo registered
     // nahi hai (typo/hallucination). Pehle isse silently drop kiya jaata tha,
     // jisse cleanText khaali reh jaata tha aur user ko bilkul blank bubble
     // dikhta tha (koi text, koi error, kuch nahi). Ab: log karo taaki wajah
-    // pata chale, aur cleanText khaali ho to original text hi fallback ke
-    // tor pe wapas do (raw tag samet) — kam se kam kuch dikhega.
+    // pata chale, aur cleanText khaali ho to safe fallback text do (raw tag
+    // KABHI wapas mat do — warna wahi leak wapas aa jaayega).
     console.error(`[extractAction] Unknown protocol "${name}" — raw tag:`, full);
-    return { cleanText: cleanText || text, action: null };
+    return { cleanText: cleanText || SAFE_FALLBACK_TEXT, action: null };
   }
 
   try {
@@ -202,17 +237,31 @@ function extractAction(text) {
       const payload = JSON.parse(sanitizeJsonLike(jsonStr));
       return { cleanText, action: { name, payload } };
     } catch (e2) {
+      // Dono standard JSON attempts fail — ab targeted "big field" recovery
+      // try karo (sirf un protocols ke liye jinka ek hi bada text field hai).
+      const bigField = BIG_FIELD_BY_PROTOCOL[name];
+      if (bigField) {
+        const repaired = repairBigStringField(jsonStr, bigField);
+        if (repaired) {
+          console.error(`[extractAction] "${name}" ka JSON standard-parse se fail hua tha, lekin raw-field recovery se bacha liya (likely unescaped newline/quote in "${bigField}").`);
+          return { cleanText, action: { name, payload: repaired } };
+        }
+      }
       // Ab bhi fail — action drop karo, lekin CHUP mat raho:
       // 1) server logs mein exact raw string daalo taaki wajah pata chale.
-      // 2) blank bubble na dikhe isliye cleanText khaali ho to original
-      //    text hi fallback ke tor pe wapas de do (raw tag samet), taaki
-      //    kam se kam kuch dikhe, kuch nahi se better hai.
+      // 2) blank bubble na dikhe isliye cleanText khaali ho to SAFE fallback
+      //    text do — raw tag/JSON (jisme model ka poora broken code/string
+      //    ho sakta hai) user ko KABHI mat dikhao.
+      // 3) parseFailed:true + protocolName flag do, taaki caller (agar
+      //    bounded-retry loop mein hai) model ko turant sahi format mein
+      //    dobara bhejne ko keh sake — user ko is intermediate garbled
+      //    state ka pata hi na chale.
       console.error(
         `[extractAction] "${name}" action ka JSON parse fail hua.\nRaw:`,
         jsonStr,
         '\nError:', e2.message
       );
-      return { cleanText: cleanText || text, action: null };
+      return { cleanText: cleanText || SAFE_FALLBACK_TEXT, action: null, parseFailed: true, protocolName: name };
     }
   }
 }
@@ -405,7 +454,24 @@ async function runProviderWithActions(provider, key, initialMessages, onStatus, 
     lastText = text;
     lastModel = model;
 
-    const { cleanText, action } = extractAction(text);
+    const { cleanText, action, parseFailed, protocolName } = extractAction(text);
+
+    if (!action && parseFailed) {
+      // Model ne ek valid action-naam bheja tha (run_code/termux_run/etc)
+      // lekin uska JSON malformed tha (dono standard parse + raw-field
+      // recovery bhi fail ho gaye) — user ko is intermediate garbled state
+      // (ya generic fallback text) kabhi mat dikhao. Iske bajaye khud model
+      // ko ek chhota, saaf retry-note bhej ke turant sahi JSON mangwao —
+      // bilkul web_search wale iteration jaisa hi bounded loop hai, isliye
+      // infinite retry ka koi risk nahi (MAX_TOOL_ITERATIONS se capped hai).
+      const retryNote = `[Tera pichla [ACTION:${protocolName}] JSON parse nahi ho paaya — ho sakta hai kisi string field (jaise code/command) ke andar literal newline ya unescaped double-quote reh gaya ho. Wahi cheez, isi intent ke saath, dobara bhej — is baar STRICT valid JSON mein: string values ke andar naya line ho to \\n likh, aur " character ho to \\" se escape kar. Sirf tag phir se bhej, koi extra chatter mat likh.]`;
+      messages = [
+        ...messages,
+        { role: 'assistant', content: text },
+        { role: 'user', content: retryNote },
+      ];
+      continue;
+    }
 
     if (action && action.name === 'web_search') {
       const query = action.payload && action.payload.query;
