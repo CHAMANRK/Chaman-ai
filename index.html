@@ -2883,7 +2883,7 @@ micropip.install = _patched_install
         : `\nKOI FILE CREATE/SAVE NAHI HUI iss run mein. Agar user ne file maangi thi, to "file ban gayi"/"successfully create ho gayi"/"download button de diya" jaisa KABHI mat bol — saaf bata ki file nahi bani (code mein likhna reh gaya, ya path/filename galat tha, ya error aayi), aur agar zaroorat ho to sahi kiya hua code doosri baar bhej.`;
       return `[Python code run ho gaya, output:]\n${out || '(koi stdout output nahi tha)'}${resultLine}${filesLine}\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
     }
-    return `[Python code run karte waqt error aayi:]\n${result.error || 'Unknown error'}\n${result.stdout ? `\nAb tak ka stdout:\n${result.stdout}` : ''}\n\n[User ko batao ki code mein kya galat hua, aur agar possible ho to sahi kiya hua code doosri baar suggest kar.]`;
+    return `[Python code run karte waqt error aayi:]\n${result.error || 'Unknown error'}\n${result.stdout ? `\nAb tak ka stdout:\n${result.stdout}` : ''}\n\n[User ko chhote mein batao ki code mein kya galat hua, aur agar fix possible ho to sahi kiya hua code TURANT [ACTION:run_code] se dobara (khud) bhej de aur run kar — code ko sirf plain text/markdown mein "suggestion" ki tarah mat dikha, aur "batao to run kar dun?" jaisi permission bhi mat maang. [ACTION:run_code] khud-ba-khud chalta hai, isliye directly retry kar.]`;
   }
 
   // ── markdown renderer: headings, tables, lists, bold/italic/inline-code, fenced code blocks ──
