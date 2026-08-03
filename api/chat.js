@@ -373,7 +373,19 @@ const PROVIDERS = [
       callOpenAICompatible({
         url: 'https://openrouter.ai/api/v1/chat/completions',
         key,
-        model: 'openrouter/free', // auto-routes to whichever free model is currently up
+        // NOTE: pehle "openrouter/free" tha — wo ek RANDOM auto-router hai jo
+        // currently-available kisi bhi free model (chahe weak/vision-only ho)
+        // pe route kar sakta hai. Humara [ACTION:name]{json}[/ACTION] ek
+        // custom TEXT convention hai (OpenRouter ke native "tool calling"
+        // feature se alag), isliye auto-router isse filter/prioritize nahi
+        // kar paata — result: kabhi strong model milta, kabhi ek chhota
+        // vision-tuned model jo strict tag format follow hi nahi karta,
+        // aur poora raw JSON/action tag leak ho jaata. Isliye ab ek fixed,
+        // strong, TEXT-focused free model pin kiya hai — Groq wale
+        // "openai/gpt-oss-120b" ka hi chhota open-weight sibling (same
+        // Harmony format, function-calling/structured-output support),
+        // isliye behavior dono providers mein consistent rehta hai.
+        model: 'openai/gpt-oss-20b:free',
         messages,
         termuxStatus,
         extraHeaders: {
