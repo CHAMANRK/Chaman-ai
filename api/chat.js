@@ -158,12 +158,32 @@ function buildProtocolDocs() {
   const names = Object.keys(PROTOCOLS).sort();
   if (!names.length) return '';
   const blocks = names.map((name) => PROTOCOLS[name].describe).join('\n\n');
-  return `\n\nTERE PAAS YE STRUCTURED ACTIONS AVAILABLE HAIN (zaroorat pade tabhi use kar):\n\n${blocks}`;
+  return `\n\nTERE PAAS YE STRUCTURED ACTIONS AVAILABLE HAIN (zaroorat pade tabhi use kar):\n\n${blocks}\n\n★★★ FORMAT RULE (SABSE ZAROORI) ★★★ — action tag EXACTLY isi literal format mein bhej: [ACTION:name]{...json...}[/ACTION] — square brackets ke saath, bina kisi markdown code-fence (\`\`\`) ke andar wrap kiye. KABHI bhi \`\`\`ACTION:name jaisa (triple-backtick ko fence-language ki tarah use karke) mat likh, aur tag ko \`\`\`...\`\`\` ke andar bhi mat lapet — ye ek internal protocol hai, code-snippet nahi hai. Isse format thoda bhi hatne pe tag detect nahi hota aur poora raw text (JSON samet) galti se user ko dikh jaata hai.`;
 }
 
 // Reply text ke andar se pehla [ACTION:name]{json}[/ACTION] block dhoondhta hai,
 // use text se nikaal (strip) deta hai, aur parsed action { name, payload } return karta hai.
 const ACTION_REGEX = /\[ACTION:(\w+)\]([\s\S]*?)\[\/ACTION\]/;
+
+// Model kabhi-kabhi action tag ko markdown code-fence ki tarah bhej deta hai —
+// jaise ```ACTION:run_code\n{...}[/ACTION]\n``` (fence ka "language" hi
+// "ACTION:name" bana deta hai, [ACTION:name] wale square brackets kabhi
+// likhta hi nahi), ya phir sahi [ACTION:name]...[/ACTION] ko hi ```...```
+// ke andar wrap kar deta hai. Dono cases mein ACTION_REGEX literal
+// "[ACTION:name]" na milne ki wajah se match hi nahi karta — aur poora
+// raw text (fence + JSON + kabhi prose bhi) seedha user ko final reply
+// ki tarah dikh jaata hai (JSON/action syntax leak). Yahan match karne se
+// PEHLE hi in dono fence-variants ko strict [ACTION:name]...[/ACTION]
+// format mein normalize kar dete hain, taaki wo sahi se detect ho aur
+// action asal mein CHALE — sirf leak na ho, ye kaafi nahi hai.
+function normalizeActionFencing(text) {
+  return text
+    // ```ACTION:name (bina [ ] ke) → [ACTION:name]
+    .replace(/```\s*ACTION:(\w+)\s*\r?\n?/gi, '[ACTION:$1]')
+    // Agar fence seedha [ACTION:name] se pehle/baad hi lagi hai (extra noise), hata do.
+    .replace(/```\s*(\[ACTION:)/gi, '$1')
+    .replace(/(\[\/ACTION\])\s*```/gi, '$1');
+}
 
 // Model kabhi-kabhi "valid-looking but not quite JSON" bhej deta hai —
 // ```json fences ke andar wrap kar dena, smart/curly quotes (“” ‘’ instead
@@ -201,7 +221,8 @@ function repairBigStringField(raw, key) {
   return { [key]: m[1] };
 }
 
-function extractAction(text) {
+function extractAction(rawText) {
+  const text = normalizeActionFencing(rawText);
   const match = text.match(ACTION_REGEX);
   if (!match) return { cleanText: text, action: null };
 
