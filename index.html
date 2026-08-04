@@ -91,6 +91,22 @@
     background:var(--amber);
     box-shadow:0 0 8px rgba(232,163,61,0.7);
   }
+  .token-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+  }
+  .token-badge .tb-last{
+    color:var(--amber);
+    transition:opacity .2s;
+  }
+  .token-badge .tb-last:empty{display:none;}
+  .token-badge .tb-sep{color:var(--line);}
   .bridge-status-line{
     display:flex; align-items:center; gap:8px;
     font-size:12.5px; color:var(--paper-dim);
@@ -1268,6 +1284,9 @@
   <button id="menuBtn" class="icon-btn" aria-label="Menu" type="button">
     <img src="https://img.icons8.com/led/32/activity-feed.png" alt="Menu">
   </button>
+  <div class="token-badge" id="tokenBadge" title="Is session ka total token usage">
+    <span class="tb-last" id="tokenBadgeLast"></span><span class="tb-sep" id="tokenBadgeSep"></span><span id="tokenBadgeTotal">0 tokens</span>
+  </div>
   <div class="chain" id="chain">
     <div class="dot" data-provider="Groq"></div>
     <div class="dot" data-provider="OpenRouter"></div>
@@ -1391,6 +1410,9 @@
   const $input = document.getElementById('input');
   const $send = document.getElementById('send');
   const $dots = document.querySelectorAll('.chain .dot');
+  const $tokenBadgeLast = document.getElementById('tokenBadgeLast');
+  const $tokenBadgeSep = document.getElementById('tokenBadgeSep');
+  const $tokenBadgeTotal = document.getElementById('tokenBadgeTotal');
   const $menuBtn = document.getElementById('menuBtn');
   const $overlay = document.getElementById('overlay');
   const $drawer = document.getElementById('drawer');
@@ -1423,6 +1445,44 @@
   let busy = false;
   let currentAbortController = null; // jo bhi /api/chat request abhi in-flight hai, uska controller — Stop button isi ko abort karta hai
   let activeSessionId = null; // null = abhi tak koi reply nahi aaya, session bana hi nahi
+
+  // ── Token usage counter ─────────────────────────────────────────────
+  // Har assistant history-entry apna khud ka token cost store karta hai
+  // ({tokens: {prompt,completion,total}}) — isliye session switch/reload
+  // pe total hamesha history se hi recompute hota hai (localStorage mein
+  // alag se koi running-total store/sync nahi karna padta, single source
+  // of truth hamesha history hi rehta hai).
+  let sessionTokenTotal = 0;
+
+  function formatTokenCount(n) {
+    if (n == null || Number.isNaN(n)) return '?';
+    if (n >= 100000) return Math.round(n / 1000) + 'k';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  // history se poore session ka total (sab assistant messages ke tokens.total ka sum) nikalta hai.
+  function computeSessionTokenTotal(msgs) {
+    return (msgs || []).reduce((sum, m) => {
+      if (m.role === 'assistant' && m.tokens && typeof m.tokens.total === 'number') {
+        return sum + m.tokens.total;
+      }
+      return sum;
+    }, 0);
+  }
+
+  // lastTurnTokens = abhi-abhi aaye reply ka cost (badge mein "+X" flash
+  // dikhane ke liye) — undefined/omit karo to sirf total refresh hoga.
+  function updateTokenBadge(lastTurnTokens) {
+    $tokenBadgeTotal.textContent = formatTokenCount(sessionTokenTotal) + ' tokens';
+    if (lastTurnTokens != null) {
+      $tokenBadgeLast.textContent = '+' + formatTokenCount(lastTurnTokens);
+      $tokenBadgeSep.textContent = '·';
+    } else {
+      $tokenBadgeLast.textContent = '';
+      $tokenBadgeSep.textContent = '';
+    }
+  }
 
   // Send button ab busy state mein kabhi disable nahi hota — uski jagah wahi
   // button "Stop" ban jaata hai (icon badal jaata hai, clickable rehta hai).
@@ -2370,11 +2430,14 @@
       if (msg.role === 'user') {
         addUserBubble(msg.displayText != null ? msg.displayText : msg.content, msg.files);
       } else if (msg.role === 'assistant') {
-        addAssistantBubble(msg.content, msg.provider ? `${msg.provider} · ${msg.model || ''}` : null, false, false);
+        const tokLabel = msg.tokens && msg.tokens.total ? ` · ${formatTokenCount(msg.tokens.total)} tok` : '';
+        addAssistantBubble(msg.content, msg.provider ? `${msg.provider} · ${msg.model || ''}${tokLabel}` : null, false, false);
       }
     }
     const last = history[history.length - 1];
     lightDot(last && last.provider ? last.provider : null);
+    sessionTokenTotal = computeSessionTokenTotal(history);
+    updateTokenBadge();
     renderSessionList();
     closeDrawer();
     scrollBottom(true);
@@ -2387,6 +2450,8 @@
     sandboxFiles = {};
     clearMain();
     lightDot(null);
+    sessionTokenTotal = 0;
+    updateTokenBadge();
     renderSessionList();
     closeDrawer();
     updateJumpBtn();
@@ -2414,6 +2479,8 @@
     history = [];
     activeSessionId = null;
     lightDot(null);
+    sessionTokenTotal = 0;
+    updateTokenBadge();
     updateProfileDisplay();
     showOnboardIfNeeded();
   })();
@@ -4022,6 +4089,7 @@ micropip.install = _patched_install
     try {
       let iter = 0;
       const producedFiles = []; // is turn ke saare run_code iterations mein bani output files ka collection
+      let turnTokens = 0; // is poore turn (saare run_code round-trips samet) ka cumulative token cost
 
       while (true) {
         const thinkingRow = addThinking();
@@ -4052,15 +4120,34 @@ micropip.install = _patched_install
           return;
         }
 
+        // Har round-trip ka token cost real hai (chahe ye final answer ho ya
+        // ek intermediate run_code iteration) — isliye har baar jodte hain,
+        // sirf aakhri wale ka nahi.
+        if (finalEvent.usage && typeof finalEvent.usage.total === 'number') {
+          turnTokens += finalEvent.usage.total;
+          sessionTokenTotal += finalEvent.usage.total;
+          updateTokenBadge(finalEvent.usage.total);
+        }
+
         if (finalEvent.action && finalEvent.action.name === 'run_code' && iter < MAX_CODE_ITERATIONS) {
           iter++;
           const code = finalEvent.action.payload && finalEvent.action.payload.code;
           if (typeof code !== 'string' || !code.trim()) {
             // Malformed request — jo bhi text mila usi ko final maan lo.
-            history.push({ role: 'assistant', content: finalEvent.reply, provider: finalEvent.provider, model: finalEvent.model });
+            history.push({
+              role: 'assistant',
+              content: finalEvent.reply,
+              provider: finalEvent.provider,
+              model: finalEvent.model,
+              tokens: turnTokens ? { total: turnTokens } : undefined,
+            });
             persistTurn();
             lightDot(finalEvent.provider);
-            addAssistantBubble(finalEvent.reply, `${finalEvent.provider} · ${finalEvent.model || ''}`, false, true, null, producedFiles);
+            addAssistantBubble(
+              finalEvent.reply,
+              `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`,
+              false, true, null, producedFiles
+            );
             return;
           }
 
@@ -4092,10 +4179,20 @@ micropip.install = _patched_install
         }
 
         // run_code nahi maanga gaya (ya iterations khatam) — ye final answer hai.
-        history.push({ role: 'assistant', content: finalEvent.reply, provider: finalEvent.provider, model: finalEvent.model });
+        history.push({
+          role: 'assistant',
+          content: finalEvent.reply,
+          provider: finalEvent.provider,
+          model: finalEvent.model,
+          tokens: turnTokens ? { total: turnTokens } : undefined,
+        });
         persistTurn(); // pehla successful reply aate hi session (agar naya hai) auto-ban jaata hai
         lightDot(finalEvent.provider);
-        addAssistantBubble(finalEvent.reply, `${finalEvent.provider} · ${finalEvent.model || ''}`, false, true, finalEvent.action, producedFiles);
+        addAssistantBubble(
+          finalEvent.reply,
+          `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`,
+          false, true, finalEvent.action, producedFiles
+        );
         return;
       }
     } finally {
