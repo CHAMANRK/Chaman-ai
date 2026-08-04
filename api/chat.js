@@ -104,11 +104,16 @@ const PROTOCOLS = {
   },
   run_code: {
     describe:
-`[ACTION:run_code]{"code":"..."}[/ACTION]
+`[ACTION:run_code]
+\`\`\`python
+...tera poora Python code yahan, RAW — koi JSON, koi quote-escaping NAHI...
+\`\`\`
+[/ACTION]
+  - ★★★ FORMAT — YE JSON NAHI HAI, SEEDHA CODE-FENCE HAI ★★★: [ACTION:run_code] ke turant baad ek \\\`\\\`\\\`python codeblock khol, usme apna RAW Python code likh (jaise normal codeblock mein likhta), codeblock band kar (\\\`\\\`\\\`), phir [/ACTION]. Code ke andar jitne bhi " (double quotes) ya ' (single quotes) chahiye (jaise JSON banate waqt, dict/string literals mein) — SEEDHE, NORMAL likh, koi \\" escaping nahi karni, koi JSON-string wrapping nahi karni. Ye purane {"code":"..."} JSON-field format se ALAG hai — us purane format mein har quote escape karna padta tha jisse JSON-heavy code (jaise json.dump wala) aksar corrupt/fail ho jaata tha; naya fence-format isi problem ko khatam karta hai, isliye HAMESHA ye naya fence-format hi use kar.
   - Jab bhi calculation, data-processing, string/logic verify karna ho, ya kisi cheez ka exact answer code chala ke better nikle, ye action use kar.
   - DEFAULT BEHAVIOR — agar user ne koi script/program/tool maanga hai (jaise "python script likh de", "code de", "downloader bana de" waghera), YA koi EXISTING file (JSON/CSV/txt/koi bhi text-based data file) edit/modify/update karne ko bola hai, to seedha isi action se open("filename","w") karke actual FILE bana/save de — chat mein poora content as plain text/markdown codeblock paste mat kar aur phir baad mein "file de" ka wait mat kar. File hamesha pehle attempt mein hi bana ke do, sirf chhota inline snippet (2-3 lines, jaise ek single expression samjhaane ke liye) hi seedha text mein likhna theek hai.
-  - ★★★ RETRY-AFTER-ERROR MEIN BHI YAHI RULE HAI — YE SABSE COMMON GALTI HAI ★★★: agar pichla [ACTION:run_code] fail hua tha (error aaya), to fix karne ke baad CORRECTED code ko bhi turant, seedha isi action se (do)bhej — kabhi ye pattern mat kar: pehle prose mein error explain karo, phir corrected code ko triple-backtick markdown codeblock (\\\`\\\`\\\`python ...\\\`\\\`\\\`) mein dikha do, aur end mein "batao to main [ACTION:run_code] se run kar dunga" jaisa permission maango. Ye galat hai — [ACTION:run_code] khud-ba-khud, bina kisi confirmation ke chalta hai, isliye "run karu?" poochhna hi galat hai; wahi corrected code seedha isi action se (do)bhej de, ek chhota "pichli baar X error thi, ab fix karke retry kar raha hoon" jaisa 1-line note kaafi hai (agar bilkul chup rehna hai to wo bhi theek hai).
-  - "code" mein self-contained Python likh — jo bhi print karna hai, explicitly print() kar (sirf last expression ki value nahi milegi, stdout hi capture hota hai).
+  - ★★★ RETRY-AFTER-ERROR MEIN BHI YAHI RULE HAI — YE SABSE COMMON GALTI HAI ★★★: agar pichla [ACTION:run_code] fail hua tha (error aaya), to fix karne ke baad CORRECTED code ko bhi turant, seedha isi action se (do)bhej — kabhi ye pattern mat kar: pehle prose mein error explain karo, phir corrected code ko ek codeblock mein "suggestion" ki tarah dikha do, aur end mein "batao to main run kar dunga" jaisa permission maango. Ye galat hai — [ACTION:run_code] khud-ba-khud, bina kisi confirmation ke chalta hai, isliye "run karu?" poochhna hi galat hai; wahi corrected code seedha isi action se (do)bhej de, ek chhota "pichli baar X error thi, ab fix karke retry kar raha hoon" jaisa 1-line note kaafi hai (agar bilkul chup rehna hai to wo bhi theek hai).
+  - Code self-contained Python hona chahiye — jo bhi print karna hai, explicitly print() kar (sirf last expression ki value nahi milegi, stdout hi capture hota hai).
   - Ye code SERVER pe nahi, user ke apne browser ke andar ek isolated WASM sandbox (Pyodide) mein chalta hai — koi network ya env-vars access nahi hai, aur 10 second baad automatically timeout ho jaata hai. Sirf pure-Python packages hi kaam karenge, heavy C-extension libraries fail ho sakti hain.
   - ★★★ TERMUX BRIDGE SE ISKA KOI LENA-DENA NAHI HAI ★★★ — ye poori tarah user ke apne BROWSER ke andar (WASM sandbox) chalta hai, kisi bhi device/server/bridge connection ki zaroorat NAHI. "LIVE TERMUX BRIDGE STATUS" note (neeche/end mein diya jaata hai) SIRF [ACTION:termux_run] ke liye relevant hai — [ACTION:run_code] use karne se pehle Termux Bridge ka status kabhi mat check kar, mat mention kar, aur "Bridge disconnected hai isliye file nahi bana sakta" jaisi baat kabhi mat bol — ye do capabilities poori tarah alag/independent hain. Termux Bridge disconnected/denied/connecting kisi bhi state mein ho, [ACTION:run_code] hamesha turant available hai.
   - FILE READ/WRITE — 3-FOLDER CONVENTION (sandbox root mein teen fixed folders hain, paths hamesha inhi ke andar likh, bina folder-prefix ke seedha "filename.ext" ab kaam NAHI karega):
@@ -212,7 +217,7 @@ function sanitizeJsonLike(raw) {
 // aur usi ko as-is (literal, koi escape-interpretation ke bina) field ki
 // value bana dete hain. Isse "unescaped newline/quote" wale sabse common
 // case mein bhi payload sahi ban jaata hai, bina model se dobara maange.
-const BIG_FIELD_BY_PROTOCOL = { run_code: 'code', termux_run: 'command', web_search: 'query' };
+const BIG_FIELD_BY_PROTOCOL = { termux_run: 'command', web_search: 'query' };
 
 function repairBigStringField(raw, key) {
   const cleaned = sanitizeJsonLike(raw);
@@ -220,6 +225,60 @@ function repairBigStringField(raw, key) {
   const m = cleaned.match(re);
   if (!m) return null;
   return { [key]: m[1] };
+}
+
+// ── run_code ke liye special-case extraction ────────────────────────
+// PEHLE format tha: [ACTION:run_code]{"code":"..."}[/ACTION] — model ko
+// Python code ke andar HAR " aur \n ko JSON-escape karna padta tha. JSON-
+// heavy code (jaise json.dump wala, dict-literal wala) mein quotes itni
+// zyada hoti hain ki model aksar ek-do escape miss kar deta tha, jisse
+// JSON.parse fail hota, aur repairBigStringField ka greedy regex bhi
+// GALAT jagah se "closing quote" utha leta (kyunki code ke andar khud
+// unescaped-jaisi dikhti quotes maujood hoti hain) — result: sandbox
+// baar-baar "failed" ho jaata tha, khaas taur pe JSON-file-banao jaisी
+// requests pe.
+//
+// NAYA format: [ACTION:run_code]\n```python\n...raw code...\n```\n[/ACTION]
+// Isme koi JSON.parse hi nahi lagta — bas ```...``` ke beech ka raw text
+// nikaal lete hain, jaisa hai waisa. Quotes/newlines ko kabhi escape nahi
+// karna padta, isliye ye poori class ki failure hi khatam ho jaati hai.
+//
+// Purana {"code":"..."} format bhi (kabhi koi provider isi purane pattern
+// pe atka reh jaaye to) chalta rahe, isliye ye function pehle naya
+// fence-format try karta hai, phir purane JSON format pe fallback karta hai.
+function extractRunCodePayload(jsonStr) {
+  const trimmed = jsonStr.trim();
+
+  // Attempt 1 (naya, preferred): ```python ... ``` ya sirf ``` ... ```
+  const fenceMatch = trimmed.match(/```(?:python)?\s*\r?\n?([\s\S]*?)\r?\n?```/i);
+  if (fenceMatch) {
+    return { code: fenceMatch[1] };
+  }
+
+  // Attempt 2 (backward-compat): purana {"code":"..."} JSON format.
+  try {
+    const payload = JSON.parse(trimmed);
+    if (payload && typeof payload.code === 'string') return payload;
+  } catch (e) { /* fall through */ }
+
+  try {
+    const payload = JSON.parse(sanitizeJsonLike(trimmed));
+    if (payload && typeof payload.code === 'string') return payload;
+  } catch (e) { /* fall through */ }
+
+  const repaired = repairBigStringField(trimmed, 'code');
+  if (repaired) return repaired;
+
+  // Attempt 3 (last resort): koi fence nahi mila aur JSON bhi nahi tha —
+  // ho sakta hai model ne bina fence ke seedha raw code bhej diya ho.
+  // Isse bilkul khaali/JSON-jaisa mat maano; sirf tab treat karo jab ye
+  // literal JSON object jaisa NA dikhta ho (taaki galti se kisi broken
+  // JSON ko hi "raw code" na maan le).
+  if (trimmed && !/^\{[\s\S]*\}$/.test(trimmed)) {
+    return { code: trimmed };
+  }
+
+  return null;
 }
 
 function extractAction(rawText) {
@@ -248,6 +307,18 @@ function extractAction(rawText) {
     // KABHI wapas mat do — warna wahi leak wapas aa jaayega).
     console.error(`[extractAction] Unknown protocol "${name}" — raw tag:`, full);
     return { cleanText: cleanText || SAFE_FALLBACK_TEXT, action: null };
+  }
+
+  // run_code ka apna dedicated extractor hai (fence-based, JSON.parse
+  // generic path se pehle) — kyunki iska payload ab JSON string field
+  // nahi, raw ```python codeblock hai. Doosre saare protocols (ask_user,
+  // web_search, quran_quiz_start, termux_run) purane JSON-based flow mein
+  // hi rehte hain, unme ye dikkat nahi thi (unke fields chhote/simple hain).
+  if (name === 'run_code') {
+    const payload = extractRunCodePayload(jsonStr);
+    if (payload) return { cleanText, action: { name, payload } };
+    console.error(`[extractAction] "run_code" ka fence/JSON dono extraction fail hua.\nRaw:`, jsonStr);
+    return { cleanText: cleanText || SAFE_FALLBACK_TEXT, action: null, parseFailed: true, protocolName: name };
   }
 
   try {
