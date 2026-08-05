@@ -9,8 +9,14 @@
 // hoti, sirf query embed hoti hai — isliye ye script har baar knowledge
 // change karne par manually rerun karna padega).
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// package.json mein "type":"module" hai, isliye __dirname yahan built-in
+// nahi hota (CommonJS-only global) — ESM mein isi tarah derive karte hain,
+// jaise api/chat.js mein bhi kiya gaya hai.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
@@ -106,3 +112,4 @@ main().catch((err) => {
   console.error('Build fail hua:', err);
   process.exit(1);
 });
+

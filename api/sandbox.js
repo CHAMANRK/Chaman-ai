@@ -23,7 +23,12 @@
 import { Sandbox } from '@vercel/sandbox';
 
 const WORKDIR = '/vercel/sandbox';
-const RUN_TIMEOUT_MS = 15_000; // hard cap on the whole run (create + exec)
+const RUN_TIMEOUT_MS = 45_000; // hard cap on the whole run (create + exec) — bumped
+// from 15s: Vercel Hobby (with fluid compute, default-on for new projects)
+// allows up to 300s max duration, so 15s was an artificially tight
+// self-imposed limit that heavy `pip install`s (rembg, torch, etc.) would
+// blow past on a cold sandbox. 45s gives real headroom while still
+// failing reasonably fast for genuinely broken/infinite-loop code.
 
 function toBuffer(content) {
   return Buffer.from(content == null ? '' : String(content), 'utf8');

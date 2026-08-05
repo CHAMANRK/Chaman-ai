@@ -91,6 +91,18 @@
     background:var(--amber);
     box-shadow:0 0 8px rgba(232,163,61,0.7);
   }
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .termux-status-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--rust);
+    box-shadow:0 0 6px rgba(178,76,47,.6);
+    transition:background .3s, box-shadow .3s;
+    cursor:pointer;
+  }
+  .termux-status-dot.connected{
+    background:var(--sage);
+    box-shadow:0 0 8px rgba(124,148,115,.7);
+  }
   .token-badge{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -446,6 +458,12 @@
   .empty .glyph-big .empty-mark{
     animation-duration:2.6s; /* idle state mein thoda slower/calmer pulse */
   }
+  .empty-greet{
+    font-size:19px;
+    font-weight:600;
+    color:var(--paper);
+    margin-bottom:6px;
+  }
   .empty p{font-size:13px;line-height:1.6;margin:0;}
 
   .row{display:flex;max-width:100%;}
@@ -741,9 +759,31 @@
     display:flex;align-items:center;padding-left:13px;padding-top:2px;padding-bottom:2px;
     border-left:2px solid var(--amber-dim);
   }
-  .thinking .rs-mark{
+  .thinking-orb{
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;
+  }
+  .thinking-orb .aurora{
+    position:absolute;
+    width:32px;height:32px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg,
+      var(--amber), var(--rust), var(--sage), #3d8ce8, #a33de8, var(--amber));
+    filter:blur(9px) saturate(1.5);
+    opacity:.6;
+    animation:auroraSpin 3.2s linear infinite;
+  }
+  .thinking-orb .rs-mark{
+    position:relative;
+    z-index:1;
     display:block;
     animation:rsBreathe 1.5s ease-in-out infinite;
+  }
+  @keyframes auroraSpin{
+    0%{ transform:rotate(0deg) scale(1); }
+    50%{ transform:rotate(180deg) scale(1.15); }
+    100%{ transform:rotate(360deg) scale(1); }
   }
   @keyframes rsBreathe{
     0%,100%{ transform:scale(1); filter:brightness(1) drop-shadow(0 0 2px rgba(232,163,61,.35)); }
@@ -1287,11 +1327,14 @@
   <div class="token-badge" id="tokenBadge" title="Is session ka total token usage">
     <span class="tb-last" id="tokenBadgeLast"></span><span class="tb-sep" id="tokenBadgeSep"></span><span id="tokenBadgeTotal">0 tokens</span>
   </div>
-  <div class="chain" id="chain">
-    <div class="dot" data-provider="Groq"></div>
-    <div class="dot" data-provider="OpenRouter"></div>
-    <div class="dot" data-provider="Cerebras"></div>
-    <div class="dot" data-provider="Mistral"></div>
+  <div class="header-right">
+    <div class="termux-status-dot" id="termuxStatusDot" title="Termux Bridge: Disconnected" onclick="window.__openBridgeSettingsFromDot && window.__openBridgeSettingsFromDot()"></div>
+    <div class="chain" id="chain">
+      <div class="dot" data-provider="Groq"></div>
+      <div class="dot" data-provider="OpenRouter"></div>
+      <div class="dot" data-provider="Cerebras"></div>
+      <div class="dot" data-provider="Mistral"></div>
+    </div>
   </div>
 </header>
 
@@ -1381,9 +1424,7 @@
 </div>
 
 <main id="main">
-  <div class="empty" id="empty">
-    <div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="56" height="56" alt="Chaman AI"></div>
-  </div>
+  <div class="empty" id="empty"></div>
 </main>
 
 <button id="jumpBtn" class="jump-bottom" type="button" aria-label="Neeche jao">
@@ -1897,6 +1938,22 @@
   }
   Bridge.listeners.add(updateBridgeStatusDisplay);
 
+  // ── Header Termux status dot ────────────────────────────────────────
+  // Har waqt visible chhota indicator (chat page ke top-right, provider-
+  // chain dots se thoda gap rakh ke alag) — sirf 2 states dikhata hai:
+  // green (connected) ya red (baaki sab: disconnected/connecting/denied).
+  // Settings tak jaane ki zaroorat nahi bas status check karne ke liye.
+  const $termuxStatusDot = document.getElementById('termuxStatusDot');
+  function updateTermuxHeaderDot() {
+    if (!$termuxStatusDot) return;
+    const connected = Bridge.status === 'connected';
+    $termuxStatusDot.classList.toggle('connected', connected);
+    $termuxStatusDot.title = 'Termux Bridge: ' + bridgeStatusLabel(Bridge.status);
+  }
+  Bridge.listeners.add(updateTermuxHeaderDot);
+  updateTermuxHeaderDot();
+  window.__openBridgeSettingsFromDot = () => showBridgeSettingsModal();
+
   function openSettings() {
     updateProfileDisplay();
     updateBridgeStatusDisplay();
@@ -2204,6 +2261,16 @@
         $fileInput.click();
       },
     },
+    {
+      iconUrl: 'https://img.icons8.com/led/32/share-2.png',
+      iconAlt: 'Termux Bridge Connect',
+      label: 'Termux Bridge Connect',
+      handler: () => {
+        attachModal.close();
+        const cfg = loadBridgeConfig();
+        addBridgeConnectCard(!!(cfg && cfg.token));
+      },
+    },
     // Aage naye options yahan add karo.
   ];
 
@@ -2413,8 +2480,25 @@
     return text ? `${filesBlock}\n\n${text}` : filesBlock;
   }
 
+  // Chhote, halke greeting messages — har naya chat/session-switch pe randomly
+  // ek chun liya jaata hai, taaki screen har baar bilkul same na lage.
+  const EMPTY_STATE_GREETINGS = [
+    'Aaj kya madad karu?',
+    'Kya banayein aaj?',
+    'Bata, kya kaam hai?',
+    'Kis cheez mein help chahiye?',
+  ];
+
   function clearMain() {
-    $main.innerHTML = `<div class="empty" id="empty"><div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="56" height="56" alt="Chaman AI"></div></div>`;
+    const profile = loadProfile();
+    const name = profile && profile.name ? profile.name : '';
+    const greetLine = name ? `Hi ${escapeHtml(name)} 👋` : 'Hi 👋';
+    const subLine = EMPTY_STATE_GREETINGS[Math.floor(Math.random() * EMPTY_STATE_GREETINGS.length)];
+    $main.innerHTML = `<div class="empty" id="empty">
+      <div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="40" height="40" alt="Chaman AI"></div>
+      <div class="empty-greet">${greetLine}</div>
+      <p>${escapeHtml(subLine)}</p>
+    </div>`;
   }
 
   function openSession(id) {
@@ -2482,7 +2566,21 @@
     sessionTokenTotal = 0;
     updateTokenBadge();
     updateProfileDisplay();
+    clearMain();
     showOnboardIfNeeded();
+
+    // Termux Bridge: agar pehle se port/token saved hai, silently reconnect
+    // try karo. Isse pehle status hamesha 'disconnected' se shuru hota tha
+    // har app reload pe — chahe Termux server actually chal raha ho aur
+    // token bilkul sahi ho — jab tak user khud Settings mein jaake dobara
+    // "Save & Connect" na dabaye. Fail ho (Termux band hai abhi) to bhi
+    // koi error UI nahi dikhti, bas status 'denied'/'disconnected' rehta
+    // hai jaisa pehle tha — sirf ab genuinely-connected case turant pakda
+    // jaata hai.
+    const savedBridgeCfg = loadBridgeConfig();
+    if (savedBridgeCfg && savedBridgeCfg.token) {
+      Bridge.connect();
+    }
   })();
 
   $input.addEventListener('input', () => {
@@ -2617,7 +2715,10 @@
     row.className = 'row assistant';
     row.id = 'thinkingRow';
     row.innerHTML = `<div class="thinking">
-      <img src="logo.png" class="rs-mark" width="24" height="24" alt="Chaman AI">
+      <span class="thinking-orb">
+        <span class="aurora"></span>
+        <img src="logo.png" class="rs-mark" width="24" height="24" alt="Chaman AI">
+      </span>
     </div>`;
     $main.appendChild(row);
     scrollBottom(true);
@@ -2742,9 +2843,9 @@
   // request ke saath "current files" bhej sake. Naya chat shuru hone ya
   // session switch hone par reset hota hai.
   let sandboxFiles = {};
-  // Server ka apna 15s hard-timeout hai (api/sandbox.js); yahan thoda buffer
+  // Server ka apna 45s hard-timeout hai (api/sandbox.js); yahan thoda buffer
   // rakha hai taaki network latency ki wajah se time na khatam ho jaaye.
-  const CODE_TIMEOUT_MS = 20000;
+  const CODE_TIMEOUT_MS = 50000;
 
   // { ok, stdout, error?, outputFiles? } return karta hai. Kabhi reject nahi
   // hota — network fail/timeout bhi ek "ok:false" result ki tarah resolve
@@ -3700,19 +3801,15 @@
     scrollBottom();
   }
 
-  // ── "Termux connect karo" quick action ─────────────────────────────
-  // Ye deterministic, client-side hi handle hota hai — AI model ko call
-  // karne ki zaroorat nahi, kyunki jawab (connect button ya setup guide)
-  // hamesha same hona chahiye aur localStorage se pakka pata chal sakta
-  // hai ki user pehli baar hai ya returning. Isse model kabhi is baare
-  // mein galat/inconsistent guide bhi nahi bana sakta.
-  function isTermuxConnectIntent(text) {
-    const t = (text || '').toLowerCase();
-    const mentionsBridge = /\btermux\b|\bbridge\b/.test(t);
-    const mentionsConnect = /connect|jod\s*do|jodo|judai|jorho|setup/.test(t);
-    return mentionsBridge && mentionsConnect;
-  }
-
+  // ── Termux Bridge setup guide card ──────────────────────────────────
+  // Ab sirf do jagah se trigger hota hai: (1) "+ Add" menu ka "Termux
+  // Bridge Connect" button (deterministic, user ne explicitly maanga),
+  // ya (2) khud AI, agar user ne chat mein connect karne ko kaha aur AI
+  // ko lage ki setup guide dikhana hi sahi jawab hai. Isse purana
+  // keyword-match intercept hata diya gaya — wo har us message ko hijack
+  // kar leta tha jisme "termux" + "connect" dono words kahin bhi aa
+  // jaayein, chahe user status pooch raha ho ya kuch aur — jisse AI tak
+  // wo message kabhi pahunchta hi nahi tha.
   const TERMUX_SETUP_GUIDE_MD =
 `Chalo Termux Bridge connect karte hain — pehle Termux app mein ye steps karo:
 
@@ -4070,18 +4167,6 @@
     const text = $input.value.trim();
     if (!text && attachedFiles.length === 0) return;
     if (attachedFiles.some((f) => f.status === 'reading')) return; // file abhi padhi ja rahi hai, thoda ruko
-
-    // Termux-connect quick action — AI ko bypass karke seedha deterministic
-    // UI dikhate hain (isliye ye AI history mein bhi push nahi hota, ye
-    // sirf ek shortcut hai, real conversation turn nahi).
-    if (text && attachedFiles.length === 0 && isTermuxConnectIntent(text)) {
-      addUserBubble(text, []);
-      $input.value = '';
-      $input.style.height = 'auto';
-      const cfg = loadBridgeConfig();
-      addBridgeConnectCard(!!(cfg && cfg.token));
-      return;
-    }
 
     const filesMeta = attachedFiles.map((f) => ({ name: f.name, kind: f.kind, status: f.status }));
     const outgoing = buildOutgoingMessage(text, attachedFiles);

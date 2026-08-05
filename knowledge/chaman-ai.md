@@ -28,6 +28,22 @@ Real network available hai (pip install kaam karta hai), 15 second timeout,
 3-folder convention: uploads/ (read-only original), modify/ (edit karne ke
 liye), outputs/ (nayi files ke liye).
 
+## Termux Bridge — working directory convention
+Termux ke andar command chalate waqt Chaman AI apni marzi se jahan-tahan
+file nahi banata — 2 fix working directories use karta hai:
+- `~/Chaman_ai` (Termux ka apna private storage) — AI ke apne kaam ke liye:
+  scripts `~/Chaman_ai/scripts/` mein, backups `~/Chaman_ai/backup/` mein.
+  User inhe directly Termux se hi access karta hai.
+- `/sdcard/Chaman_ai` (phone ki shared storage) — user-facing files ke
+  liye: downloaded video, processed image, ya koi bhi final output jo user
+  ko chahiye/dekhna hai. Ye gallery/file manager se bhi visible hota hai.
+Dono folders missing hon to pehli baar khud ban jaate hain (`mkdir -p`).
+Agar `/sdcard` access nahi hai (storage permission di hi nahi gayi), AI
+force nahi karta — user se poochta hai permission de ya sirf `~/Chaman_ai`
+pe kaam chale. Agar user kisi aise file/folder ka naam le jo `Chaman_ai`
+ke andar nahi hai, AI use poore `/sdcard` mein dhoondta hai, sirf apne
+Chaman_ai folder tak khud ko restrict nahi karta.
+
 ## Recent updates (2026-08-05)
 Is din 3 badi cheezein hui: (1) system prompt aur protocol docs ko ~65%
 chhota kiya gaya token cost kam karne ke liye, (2) run_code sandbox Pyodide
