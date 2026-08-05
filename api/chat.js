@@ -10,6 +10,92 @@
 //   OPENROUTER_API_KEY  (required for step 2)
 //   CEREBRAS_API_KEY    (required for step 3)
 //   MISTRAL_API_KEY     (optional — step 4, only tried if this key exists)
+//   GEMINI_API_KEY      (optional — enables RAG knowledge retrieval, see below)
+
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// ── RAG: knowledge retrieval (2026-08-05) ───────────────────────────────
+// knowledge/*.md → scripts/build-embeddings.js (run LOCALLY, not here) →
+// api/_knowledge-embeddings.json → loaded once at cold-start below.
+// Har user turn pe: query ka embedding banate hain (Gemini, live), stored
+// chunks se cosine-similarity nikaalte hain, top matches system prompt mein
+// inject karte hain. Isse poora knowledge base HAR request pe resend nahi
+// hota (jo token-heavy hota) — sirf jo us specific sawaal se relevant hai.
+// GEMINI_API_KEY set nahi hai ya JSON file missing hai to ye chup-chaap
+// skip ho jaata hai — normal chat isse kabhi break nahi hoti.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+let KNOWLEDGE_CHUNKS = [];
+try {
+  const raw = readFileSync(join(__dirname, '_knowledge-embeddings.json'), 'utf8');
+  KNOWLEDGE_CHUNKS = JSON.parse(raw)?.chunks || [];
+} catch (e) {
+  // File abhi tak generate nahi hui (scripts/build-embeddings.js chalao) —
+  // RAG bina iske bhi silently disabled rehta hai, koi crash nahi.
+  KNOWLEDGE_CHUNKS = [];
+}
+
+const GEMINI_EMBED_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent';
+const RAG_TOP_K = 3;
+const RAG_MIN_SIMILARITY = 0.55; // isse kam score wale chunks irrelevant maan ke drop
+const RAG_TIMEOUT_MS = 5000;
+
+async function embedQuery(text) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !text) return null;
+  try {
+    return await withTimeout(async (signal) => {
+      const resp = await fetch(`${GEMINI_EMBED_URL}?key=${apiKey}`, {
+        method: 'POST',
+        signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/gemini-embedding-001',
+          content: { parts: [{ text }] },
+          taskType: 'RETRIEVAL_QUERY',
+        }),
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      return Array.isArray(data?.embedding?.values) ? data.embedding.values : null;
+    }, RAG_TIMEOUT_MS);
+  } catch (e) {
+    return null; // Gemini down/slow/quota-out — RAG skip, chat continues normally
+  }
+}
+
+function cosineSimilarity(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom ? dot / denom : 0;
+}
+
+// User ke latest message ke base pe knowledge base se top-K relevant chunks
+// dhoondta hai, aur unhe ek system-note string mein format karta hai (ready
+// to append to SYSTEM_PROMPT). Koi match na mile / RAG disabled ho to ''.
+async function retrieveKnowledgeNote(query) {
+  if (!KNOWLEDGE_CHUNKS.length) return '';
+  const qVector = await embedQuery(query);
+  if (!qVector) return '';
+
+  const scored = KNOWLEDGE_CHUNKS
+    .map((c) => ({ title: c.title, text: c.text, score: cosineSimilarity(qVector, c.vector) }))
+    .sort((a, b) => b.score - a.score)
+    .filter((c) => c.score >= RAG_MIN_SIMILARITY)
+    .slice(0, RAG_TOP_K);
+
+  if (!scored.length) return '';
+
+  const blocks = scored.map((c) => `### ${c.title}\n${c.text}`).join('\n\n');
+  return `\n\n═══ TERA APNA KNOWLEDGE BASE (is query ke liye retrieval se mile relevant facts) ═══\nInhe sach maan aur inhi ke base pe jawab de — agar yahan info maujood hai to "pata nahi" mat bol:\n${blocks}`;
+}
 
 const SYSTEM_PROMPT = `# Chaman AI — System Prompt
 
@@ -88,78 +174,49 @@ Sessions drawer · Settings · Termux Bridge status · Copy button · Run button
 // Naya protocol add karna ho toh bas neeche ek naya key daal do — system
 // prompt mein woh apne aap (alphabetically sorted) list ho jaayega, aur
 // parsing/extraction logic already generic hai, usse kuch chhedna nahi padega.
+// NOTE (2026-08-05): protocol docs trimmed ~65% to cut per-call token cost —
+// these get resent in FULL on every single provider call (system prompt is
+// not cached/persisted server-side). Kept only behavior-critical rules;
+// dropped redundant restatements and obvious-from-example explanations.
+// If a model starts misbehaving on a specific action, that's the first
+// place to check — some nuance may have been cut too aggressively.
 const PROTOCOLS = {
   ask_user: {
     describe:
 `[ACTION:ask_user]{"type":"single|multi","question":"...","options":["opt1","opt2"]}[/ACTION]
-  - Sirf genuinely ambiguous case mein use kar, har chhoti baat pe nahi
-  - "single" → ek tap se answer chala jaata hai; "multi" → multiple tick + "Confirm"
-  - "options": 2-4, jitni zaroorat utni hi
-  - UI mein free-text field already hai → options exhaustive hone ki zaroorat nahi, sirf common cases de
-  - Tag ke aage-peeche normal text likh sakta hai, format exact rehna chahiye
-  - JSON: ek line, sirf seedhe double-quotes ("), koi smart quotes/code-fence/trailing comma nahi`,
+  - Sirf genuinely ambiguous case mein, options 2-4
+  - JSON ek line, seedhe double-quotes, no trailing comma`,
   },
   web_search: {
     describe:
 `[ACTION:web_search]{"query":"..."}[/ACTION]
-  - Current/live info chahiye ya kisi fact pe confident nahi hai to use kar
-  - "query": short, specific keywords (Google mein type karne jaisa)
-  - Background mein resolve hota hai — result agle turn mein aata hai, usi pe final Hinglish answer dena
-  - Sirf tag bhej, koi extra chatter nahi (ye intermediate step hai)
-  - Ek response mein ek hi search`,
+  - Current/live/unsure fact ke liye, short keyword query
+  - Sirf tag bhej (intermediate step), ek response mein ek hi search`,
   },
   run_code: {
     describe:
 `[ACTION:run_code]
 \`\`\`python
-...tera poora Python code yahan, RAW — koi JSON, koi quote-escaping NAHI...
+...raw code, no JSON/escaping...
 \`\`\`
 [/ACTION]
-  - Format: JSON nahi, seedha \\\`\\\`\\\`python fence — quotes/newlines seedhe likh, escape/JSON-wrapping mat kar (purana {"code":"..."} format use mat kar)
-  - Calculation/data-processing/logic verify karne ke liye use kar
-  - Script/tool request ya existing file edit → seedha open("...","w") se FILE bana/save kar, chat mein content paste mat kar; chhota 2-3 line inline snippet hi text mein theek hai
-  - Error ke baad retry: turant corrected code isi action se (do)bhej — permission mat maang ("run karu?" mat pooch), 1-line note kaafi hai
-  - Self-contained code, jo print karna hai explicitly print() kar (sirf last-expression value nahi milti)
-  - Browser WASM sandbox (Pyodide) mein chalta hai — no network/env-vars, 10s timeout, sirf pure-Python libs chalengi
-  - Termux Bridge se koi lena-dena nahi — Bridge status yahan kabhi check/mention mat kar, hamesha available hai
-  - Files 3-folder convention (bina prefix "filename.ext" kaam nahi karega):
-    • uploads/<naam> → attached file ka original (read-only), open("uploads/filename.ext")
-    • modify/<naam> → existing file update, same filename se open("modify/filename.ext","w")
-    • outputs/<naam> → bilkul nayi file, open("outputs/filename.ext","w")
-    File automatically download-card ki tarah dikh jaati hai, extra JSON field nahi chahiye
-  - Result (stdout/error/file-naam) follow-up message mein aata hai, usi pe final answer dena
-  - Success sirf tabhi bol jab result mein "Modify hui files" / "Nayi files" line ho (sahi filename ke saath) — warna file nahi bani maan ke error/reason bata, sahi code doobara bhej. Result dekhe bina "ho gaya" claim mat kar
-  - Sirf tag bhej, koi extra chatter mat likh (ye intermediate step hai)
-  - Ek response mein ek hi run_code`,
+  - Calculation/file-ops ke liye. File save: open("outputs/<naam>","w") naya, open("modify/<naam>","w") edit, open("uploads/<naam>") read-only
+  - print() zaroor kar jo dikhana hai. Error pe seedha corrected code dobara bhej, permission mat maang
+  - Success sirf result mein "Nayi/Modify hui files" line dekh ke bol, warna nahi
+  - Sirf tag bhej, ek response mein ek hi run_code`,
   },
   quran_quiz_start: {
     describe:
 `[ACTION:quran_quiz_start]{"from":1,"to":30,"total":10}[/ACTION]
-  - Quran Ayat Quiz khelne ki request pe use kar
-  - Pehle 2 sawaal poochh (alag ask_user turns mein, ek response mein ek hi ask_user): (1) kitne para (1-30) (2) kitne sawaal
-  - Dono confirm hote hi seedha ye action bhej — "from"/"to" (from<=to) aur "total"
-  - Sirf tag bhej — client khud ayat card dikhata hai, kuch aur render/describe mat kar
-  - Result follow-up turn mein aata hai: ayat detail, user ka jawab, sahi/galat, progress (aur "QUIZ SESSION KHATAM" agar last sawaal tha)
-  - Result aane tak kuch assume mat kar, chup-chaap wait kar
-  - Result milne ke baad (jab tak "QUIZ SESSION KHATAM" na ho): chhoti reaction de (sahi/galat, Surah/Para/Page bata ke encourage) aur bina poochhe seedha agla quran_quiz_start bhej (same from/to/total) — session khud chalta rahe, "agla chahiye?" mat pooch
-  - "QUIZ SESSION KHATAM" aaye to naya action mat bhej — chhota summary de (kitne sahi/total) aur naya session poochh
-  - Ek response mein ek hi quran_quiz_start`,
+  - Pehle 2 ask_user (para range, sawaal count), phir ye action
+  - Result follow-up turn mein aata: reaction de + agla khud bhej ("agla chahiye" mat pooch), "QUIZ SESSION KHATAM" pe summary de aur ruk ja`,
   },
   termux_run: {
     describe:
 `[ACTION:termux_run]{"command":"..."}[/ACTION]
-  - run_code se alag: ye sirf user ke "▶ Run" dabane par chalta hai, tu khud execute nahi karta, sirf suggest karta hai
-  - Sirf real-device (Termux) kaam ke liye — pip/apt install, yt-dlp/ffmpeg, git clone, filesystem, koi bhi shell command jo browser sandbox mein possible nahi
-  - Proactive raho: read-only/diagnostic command (ls, pwd, cat, which, df, du, find, ps, etc.) seedha bhej de, step-by-step prose ya dobara confirmation mat maang
-  - "Termux app khol ke chalao" jaisa kabhi mat bol — sab isi chat ke "▶ Run" button se hota hai
-  - Result manually mat maang — stdout/stderr/exit-code automatically agle turn mein aata hai
-  - Ambiguous case: pehle ask_user se concrete command/path options poochh, phir seedha wahi command termux_run se bhej
-  - Risky/destructive command: 1-line warning de sakta hai, lekin action tag zaroor bhej
-  - Bridge optional hai — connect nahi hai ya error aaye to Settings → Termux Bridge connect bolna, kuch invent mat kar
-  - "command": ek self-contained shell line (zaroorat ho to \`&&\` se chain kar sakta hai)
-  - Result follow-up turn mein aata hai (bilkul run_code jaisa), usi pe final jawab de, result se pehle assume mat kar
-  - Sirf tag bhej, koi extra chatter mat likh (ye ek suggestion hai, result baad mein aayega)
-  - Ek response mein ek hi termux_run`,
+  - User ke real phone (Termux) ke liye, sirf "▶ Run" dabane par chalta hai
+  - Read-only command seedha bhej de (confirm mat maang). Bridge disconnected ho to Settings bolna, command mat bhej
+  - Sirf tag bhej, ek response mein ek hi termux_run`,
   },
 };
 
@@ -391,17 +448,17 @@ function termuxStatusNote(termuxStatus) {
     denied: 'DENIED hai (browser ne local-network permission allow nahi ki) — [ACTION:termux_run] mat bhej, user ko bata de ki browser permission dobara allow karni padegi (Settings → Termux Bridge → dobara Save & Connect try kare).',
     disconnected: 'DISCONNECTED hai abhi — [ACTION:termux_run] mat bhej, pehle user ko bridge connect/setup karwa (Settings → Termux Bridge).',
   };
-  return `\n\n═══ LIVE TERMUX BRIDGE STATUS (is exact request ke waqt) ═══\nTermux Bridge abhi ${lines[status]}\nYe status har request ke saath fresh aata hai (client ke apne live WebSocket state se) — isliye "connected hai ya nahi" khud guess/assume kabhi mat kar, hamesha isi upar wali line ko sach maan.\n★ SCOPE: Ye status SIRF [ACTION:termux_run] (user ke real device/Termux pe kuch karna) ke decision ke liye hai. [ACTION:run_code] (browser ke andar Pyodide sandbox) is status se BILKUL affect nahi hota — usko is note se koi matlab nahi, wo hamesha available hai chahe Bridge kisi bhi state mein ho.`;
+  return `\n\n═══ LIVE TERMUX BRIDGE STATUS (is exact request ke waqt) ═══\nTermux Bridge abhi ${lines[status]}\nYe status har request ke saath fresh aata hai (client ke apne live WebSocket state se) — isliye "connected hai ya nahi" khud guess/assume kabhi mat kar, hamesha isi upar wali line ko sach maan.\n★ SCOPE: Ye status SIRF [ACTION:termux_run] (user ke real device/Termux pe kuch karna) ke decision ke liye hai. [ACTION:run_code] (server-side Vercel Sandbox, alag isolated cloud microVM) is status se BILKUL affect nahi hota — usko is note se koi matlab nahi, wo hamesha available hai chahe Bridge kisi bhi state mein ho.`;
 }
 
-function toOpenAIMessages(messages, termuxStatus) {
+function toOpenAIMessages(messages, termuxStatus, knowledgeNote) {
   return [
-    { role: 'system', content: SYSTEM_PROMPT + buildProtocolDocs() + termuxStatusNote(termuxStatus) },
+    { role: 'system', content: SYSTEM_PROMPT + buildProtocolDocs() + termuxStatusNote(termuxStatus) + (knowledgeNote || '') },
     ...messages,
   ];
 }
 
-async function callOpenAICompatible({ url, key, model, messages, termuxStatus, extraHeaders = {} }) {
+async function callOpenAICompatible({ url, key, model, messages, termuxStatus, knowledgeNote, extraHeaders = {} }) {
   return withTimeout(async (signal) => {
     const r = await fetch(url, {
       method: 'POST',
@@ -413,8 +470,14 @@ async function callOpenAICompatible({ url, key, model, messages, termuxStatus, e
       },
       body: JSON.stringify({
         model,
-        messages: toOpenAIMessages(messages, termuxStatus),
+        messages: toOpenAIMessages(messages, termuxStatus, knowledgeNote),
         temperature: 0.7,
+        // Cap completion length — without this the model can generate an
+        // unbounded reply, which silently burns completion tokens (and, on
+        // a paid fallback, real money) with no ceiling. 1000 tokens is
+        // generous for Hinglish chat replies; run_code/quran_quiz payloads
+        // are short JSON/code blocks that comfortably fit under this.
+        max_tokens: 1000,
       }),
     });
     if (!r.ok) {
@@ -445,19 +508,20 @@ const PROVIDERS = [
   {
     name: 'Groq',
     envKey: 'GROQ_API_KEY',
-    run: (key, messages, termuxStatus) =>
+    run: (key, messages, termuxStatus, knowledgeNote) =>
       callOpenAICompatible({
         url: 'https://api.groq.com/openai/v1/chat/completions',
         key,
         model: 'openai/gpt-oss-120b',
         messages,
         termuxStatus,
+        knowledgeNote,
       }),
   },
   {
     name: 'OpenRouter',
     envKey: 'OPENROUTER_API_KEY',
-    run: (key, messages, termuxStatus) =>
+    run: (key, messages, termuxStatus, knowledgeNote) =>
       callOpenAICompatible({
         url: 'https://openrouter.ai/api/v1/chat/completions',
         key,
@@ -476,6 +540,7 @@ const PROVIDERS = [
         model: 'openai/gpt-oss-20b:free',
         messages,
         termuxStatus,
+        knowledgeNote,
         extraHeaders: {
           'HTTP-Referer': 'https://chaman-ai.vercel.app',
           'X-Title': 'Chaman AI',
@@ -485,27 +550,39 @@ const PROVIDERS = [
   {
     name: 'Cerebras',
     envKey: 'CEREBRAS_API_KEY',
-    run: (key, messages, termuxStatus) =>
+    run: (key, messages, termuxStatus, knowledgeNote) =>
       callOpenAICompatible({
         url: 'https://api.cerebras.ai/v1/chat/completions',
         key,
         model: 'llama-3.3-70b',
         messages,
         termuxStatus,
+        knowledgeNote,
       }),
   },
-  {
-    name: 'Mistral',
-    envKey: 'MISTRAL_API_KEY',
-    run: (key, messages, termuxStatus) =>
-      callOpenAICompatible({
-        url: 'https://api.mistral.ai/v1/chat/completions',
-        key,
-        model: 'mistral-small-latest',
-        messages,
-        termuxStatus,
-      }),
-  },
+  // Mistral REMOVED from the default fallback chain (2026-08-05):
+  // Mistral has no genuinely "free" model (unlike OpenRouter's ":free" tag) —
+  // every model on their API is billed per-token by default. The only free
+  // path is account-level: an un-carded "Experiment" tier gives ~1B rate-limited
+  // tokens/month, but that's a Mistral-console setting, not something this code
+  // can guarantee. To avoid silently spending real money as a 4th fallback,
+  // Mistral is opt-in only — set MISTRAL_API_KEY *and* MISTRAL_ENABLE=true to
+  // turn it back on. Without MISTRAL_ENABLE, it's skipped even if the key exists.
+  ...(process.env.MISTRAL_ENABLE === 'true'
+    ? [{
+        name: 'Mistral',
+        envKey: 'MISTRAL_API_KEY',
+        run: (key, messages, termuxStatus, knowledgeNote) =>
+          callOpenAICompatible({
+            url: 'https://api.mistral.ai/v1/chat/completions',
+            key,
+            model: 'mistral-small-latest',
+            messages,
+            termuxStatus,
+            knowledgeNote,
+          }),
+      }]
+    : []),
 ];
 
 // ── Live Web Search (Tavily) ────────────────────────────────────────
@@ -565,7 +642,7 @@ function formatSearchResultsForModel(query, results) {
 // mein "search chal rahi hai" animation dikha sakta hai, sirf baad mein nahi.
 const MAX_TOOL_ITERATIONS = 3;
 
-async function runProviderWithActions(provider, key, initialMessages, onStatus, termuxStatus) {
+async function runProviderWithActions(provider, key, initialMessages, onStatus, termuxStatus, knowledgeNote) {
   let messages = initialMessages;
   let lastText = '';
   let lastModel = '';
@@ -585,7 +662,7 @@ async function runProviderWithActions(provider, key, initialMessages, onStatus, 
   }
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
-    const { text, model, usage } = await provider.run(key, messages, termuxStatus);
+    const { text, model, usage } = await provider.run(key, messages, termuxStatus, knowledgeNote);
     addUsage(usage);
     lastText = text;
     lastModel = model;
@@ -667,6 +744,12 @@ function splitKeys(raw) {
 // aur sirf sabse recent KEEP_LAST_MESSAGES hi as-is (full) jaate hain.
 const KEEP_LAST_MESSAGES = 5;
 const SUMMARY_LINE_MAX_CHARS = 160;
+// Without this cap, the summary block itself grows by one line per older
+// message forever — a very long session would eventually resend a summary
+// bigger than the full-message window it was meant to shrink. Once "older"
+// exceeds this count, the oldest ones are dropped (with a note), keeping the
+// most recent MAX_SUMMARY_MESSAGES older-turns as the recap.
+const MAX_SUMMARY_MESSAGES = 20;
 
 function messageContentToText(content) {
   if (typeof content === 'string') return content;
@@ -684,7 +767,12 @@ function messageContentToText(content) {
 // ka rough idea mil jaaye.
 function summarizeOlderMessages(older) {
   if (!older.length) return '';
-  const lines = older.map((m) => {
+  // Cap how many older messages get summarized — otherwise this block grows
+  // by one line every turn for the rest of the session, forever. Oldest ones
+  // beyond the cap are dropped entirely (noted below), not summarized.
+  const droppedCount = Math.max(0, older.length - MAX_SUMMARY_MESSAGES);
+  const kept = droppedCount > 0 ? older.slice(droppedCount) : older;
+  const lines = kept.map((m) => {
     const role = m.role === 'assistant' ? 'Tu (assistant)' : 'User';
     let text = messageContentToText(m.content).replace(/\s+/g, ' ').trim();
     if (text.length > SUMMARY_LINE_MAX_CHARS) {
@@ -692,8 +780,11 @@ function summarizeOlderMessages(older) {
     }
     return `- ${role}: ${text}`;
   });
+  const droppedNote = droppedCount > 0
+    ? ` (isse pehle ke ${droppedCount} bahut purane messages ab summary se bhi hata diye gaye hain, token limit ke liye)`
+    : '';
   return (
-    `[PURANI CONVERSATION KA SUMMARY — is session ke shuru ke ${older.length} messages ka short recap hai, ` +
+    `[PURANI CONVERSATION KA SUMMARY — is session ke shuru ke ${kept.length} messages ka short recap hai${droppedNote}, ` +
     `poora/exact text nahi (token bachane ke liye compress kiya gaya hai). Isko sirf background context ki tarah use kar, ` +
     `ismein se koi cheez word-for-word quote mat kar:]\n${lines.join('\n')}\n` +
     `[Yahan se aage jo messages hain wo is session ke sabse recent hain aur poore/exact hain.]`
@@ -755,6 +846,20 @@ export default async function handler(req, res) {
   const write = (event) => res.write(JSON.stringify(event) + '\n');
   const emitStatus = (statusEvent) => write({ type: 'status', ...statusEvent });
 
+  // RAG retrieval — ek hi baar is poore turn ke liye (saare providers/
+  // iterations isi note ko reuse karte hain, dobara embed nahi karte).
+  // KNOWLEDGE_CHUNKS khaali ho ya GEMINI_API_KEY na ho to ye turant ''
+  // return karta hai — chat bilkul normal chalti rahegi, kuch break nahi hota.
+  let knowledgeNote = '';
+  if (KNOWLEDGE_CHUNKS.length) {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+    const ragQuery = lastUserMsg ? messageContentToText(lastUserMsg.content) : '';
+    if (ragQuery) {
+      emitStatus({ phase: 'retrieving' });
+      knowledgeNote = await retrieveKnowledgeNote(ragQuery);
+    }
+  }
+
   const errors = [];
 
   for (const provider of PROVIDERS) {
@@ -767,7 +872,7 @@ export default async function handler(req, res) {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       try {
-        const { text, model, action, usage } = await runProviderWithActions(provider, key, messages, emitStatus, termuxStatus);
+        const { text, model, action, usage } = await runProviderWithActions(provider, key, messages, emitStatus, termuxStatus, knowledgeNote);
         write({ type: 'final', reply: text, provider: provider.name, model, action, usage });
         res.end();
         return;

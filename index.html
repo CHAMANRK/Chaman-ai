@@ -2720,219 +2720,75 @@
     scrollBottom();
   }
 
-  // ── Python Sandbox (Pyodide, ek isolated Web Worker ke andar) ──────────
-  // Model jo bhi [ACTION:run_code] se code bhejta hai, wo yahan chalta hai —
-  // poori tarah user ke apne browser mein, WASM (Pyodide/CPython) ke zariye.
-  // Worker ke andar koi file-system/network/env access nahi hota, isliye ye
-  // public users ke liye bhi safe hai (server ke API keys yahan kabhi
-  // exposed nahi hote — worker ko unka pata hi nahi chal sakta).
-  const PYODIDE_WORKER_SRC = `
-    importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
-    let pyodideReadyPromise = loadPyodide();
-    // ── 3-folder convention ──────────────────────────────────────────────
-    // uploads/  → user ne jo bhi files attach ki hain, unka pristine copy
-    //             (har run se pehle sandboxFiles se fresh seed hota hai).
-    // modify/   → wahi attached files ki EDITABLE working copy — code
-    //             isi folder mein same filename se save kare to wo
-    //             "Modified: <naam>" ban ke user ko dikhta hai.
-    // outputs/  → bilkul NAYI files (jo kisi upload se related nahi) —
-    //             "New: <naam>" ban ke dikhti hain. Har run se pehle
-    //             clear hota hai, isliye jo bhi ismein bache wo hamesha
-    //             isi run ki hi output hoti hai.
-    const SANDBOX_DIR = '/sandbox';
-    const DIR_UPLOADS = SANDBOX_DIR + '/uploads';
-    const DIR_MODIFY = SANDBOX_DIR + '/modify';
-    const DIR_OUTPUTS = SANDBOX_DIR + '/outputs';
-    let currentMsgId = null; // jis run ke liye abhi progress bhejni hai
-
-    function notifyProgress(phase, detail) {
-      if (currentMsgId === null) return;
-      self.postMessage({ id: currentMsgId, progress: true, phase, detail: detail == null ? '' : String(detail) });
-    }
-
-    // Ek baar (worker load hote hi) builtins.open aur micropip.install ko
-    // monkey-patch kar dete hain, taaki HAR run mein — chahe model ne khud
-    // koi status na maanga ho — hume pata chale ki code kab kis file ko
-    // padh/likh raha hai ya kaunsa package install kar raha hai. Ye "guess"
-    // nahi hai — asli execution ke waqt hi ye calls fire hoti hain, isliye
-    // order/timing 100% sahi hota hai (Claude ke "Reading file..." jaisa).
-    async function patchIntrospection(pyodide) {
-      pyodide.globals.set('_notify_progress', notifyProgress);
-      await pyodide.loadPackage('micropip');
-      await pyodide.runPythonAsync(\`
-import builtins
-
-_orig_open = builtins.open
-def _patched_open(file, mode='r', *args, **kwargs):
-    try:
-        is_write = any(c in mode for c in ('w', 'a', 'x', '+'))
-        _notify_progress('writing' if is_write else 'reading', str(file))
-    except Exception:
-        pass
-    return _orig_open(file, mode, *args, **kwargs)
-builtins.open = _patched_open
-
-import micropip
-_orig_install = micropip.install
-async def _patched_install(requirements, *args, **kwargs):
-    try:
-        name = requirements if isinstance(requirements, str) else ', '.join(requirements)
-        _notify_progress('installing', name)
-    except Exception:
-        pass
-    return await _orig_install(requirements, *args, **kwargs)
-micropip.install = _patched_install
-\`);
-    }
-
-    let introspectionReady = false;
-
-    self.onmessage = async (e) => {
-      const { id, code, inputFiles } = e.data;
-      let stdout = '';
-      const write = (s) => { stdout += s; };
-      try {
-        const pyodide = await pyodideReadyPromise;
-        pyodide.setStdout({ batched: (s) => write(s + '\\n') });
-        pyodide.setStderr({ batched: (s) => write(s + '\\n') });
-
-        if (!introspectionReady) {
-          await patchIntrospection(pyodide);
-          introspectionReady = true;
-        }
-
-        try { pyodide.FS.mkdir(SANDBOX_DIR); } catch (e2) { /* already exists */ }
-        try { pyodide.FS.mkdir(DIR_UPLOADS); } catch (e2) { /* already exists */ }
-        try { pyodide.FS.mkdir(DIR_MODIFY); } catch (e2) { /* already exists */ }
-        try { pyodide.FS.mkdir(DIR_OUTPUTS); } catch (e2) { /* already exists */ }
-        // Root pe chdir karte hain (uploads/DIR_MODIFY nahi) taaki code
-        // "uploads/x", "modify/x", "outputs/x" jaise relative paths use kar sake.
-        pyodide.FS.chdir(SANDBOX_DIR);
-
-        // uploads/ + modify/ ko HAR run se pehle sandboxFiles (jo attach ki gayi
-        // files aur pichle runs ke "modified" output ka latest content hai) se
-        // fresh seed karte hain — taaki code hamesha up-to-date content dekhe.
-        const modifySnapshot = {}; // name -> content, run se PEHLE ka state (diff ke liye)
-        if (inputFiles && typeof inputFiles === 'object') {
-          for (const [name, content] of Object.entries(inputFiles)) {
-            try { pyodide.FS.writeFile(DIR_UPLOADS + '/' + name, content); } catch (werr) { /* skip bad filename */ }
-            try {
-              pyodide.FS.writeFile(DIR_MODIFY + '/' + name, content);
-              modifySnapshot[name] = content;
-            } catch (werr) { /* skip bad filename */ }
-          }
-        }
-
-        // outputs/ ko har run se pehle poori tarah khaali kar dete hain, taaki
-        // run ke baad jo bhi ismein mile, wo GUARANTEED isi run ki hi output ho.
-        try {
-          for (const f of pyodide.FS.readdir(DIR_OUTPUTS)) {
-            if (f === '.' || f === '..') continue;
-            try { pyodide.FS.unlink(DIR_OUTPUTS + '/' + f); } catch (e4) { /* ignore */ }
-          }
-        } catch (e5) { /* ignore */ }
-
-        currentMsgId = id;
-        notifyProgress('running', '');
-
-        try {
-          const result = await pyodide.runPythonAsync(code);
-          const resultStr = (result === undefined || result === null) ? '' : String(result);
-
-          const outputFiles = [];
-
-          // modify/ — jo bhi file naya hai ya seed-content se alag hai, wo
-          // "Modified" output hai (existing attached file update hui, ya
-          // seedha modify/ mein hi ek nayi file bana di gayi).
-          try {
-            for (const f of pyodide.FS.readdir(DIR_MODIFY)) {
-              if (f === '.' || f === '..') continue;
-              try {
-                const data = pyodide.FS.readFile(DIR_MODIFY + '/' + f, { encoding: 'utf8' });
-                if (!(f in modifySnapshot) || modifySnapshot[f] !== data) {
-                  outputFiles.push({ name: f, path: 'modify/' + f, kind: 'modified', content: data });
-                }
-              } catch (readErr) { /* binary ya unreadable — skip (text-only support abhi) */ }
-            }
-          } catch (listErr) { /* ignore */ }
-
-          // outputs/ — outputs/ run se pehle khaali kiya tha, isliye jo bhi
-          // ismein mile wo hamesha ek bilkul NAYI file hai.
-          try {
-            for (const f of pyodide.FS.readdir(DIR_OUTPUTS)) {
-              if (f === '.' || f === '..') continue;
-              try {
-                const data = pyodide.FS.readFile(DIR_OUTPUTS + '/' + f, { encoding: 'utf8' });
-                outputFiles.push({ name: f, path: 'outputs/' + f, kind: 'new', content: data });
-              } catch (readErr) { /* binary ya unreadable — skip (text-only support abhi) */ }
-            }
-          } catch (listErr) { /* ignore */ }
-
-          currentMsgId = null;
-          self.postMessage({ id, ok: true, stdout, result: resultStr, outputFiles });
-        } catch (runErr) {
-          currentMsgId = null;
-          self.postMessage({ id, ok: false, stdout, error: String(runErr) });
-        }
-      } catch (loadErr) {
-        currentMsgId = null;
-        self.postMessage({ id, ok: false, stdout, error: 'Sandbox load fail hua: ' + String(loadErr) });
-      }
-    };
-  `;
-
-  let pyWorker = null;
-  function getPyWorker() {
-    if (!pyWorker) {
-      const blob = new Blob([PYODIDE_WORKER_SRC], { type: 'application/javascript' });
-      pyWorker = new Worker(URL.createObjectURL(blob));
-    }
-    return pyWorker;
-  }
-
+  // ── Python Sandbox (Vercel Sandbox — real server-side microVM) ─────────
+  // Model jo bhi [ACTION:run_code] se code bhejta hai, wo /api/sandbox ko
+  // POST kiya jaata hai, jahan wo ek naye, isolated Vercel Sandbox
+  // (Firecracker microVM) mein chalta hai — server-side, poori file 
+  // api/sandbox.js dekho.
+  //
+  // 2026-08-05: Pehle ye browser ke andar Pyodide (WASM) Web Worker mein
+  // chalta tha. Wahan ek real bug tha — timeout hone par worker actually
+  // kill nahi hota tha (sirf JS-side wait chhod dete the), aur worker ek
+  // hi singleton instance ki tarah reuse hota tha. Matlab ek infinite loop
+  // poore sandbox ko HAMESHA ke liye stuck kar deta tha (page refresh tak).
+  // Ab har run apna khud ka fresh sandbox leta hai aur server khud usko
+  // force-stop karta hai (timeout ho ya normal finish) — koi shared state
+  // nahi bachta jo stuck ho sake. Bonus: real network (pip install kaam
+  // karta hai ab) aur binary files bhi ab support ho sakti hain (abhi bhi
+  // sirf text/utf8 return hoti hai, binary readback aage add kar sakte hain).
+  //
   // Is conversation mein ab tak jitni bhi text/pdf files attach ki gayi hain,
-  // unka content yahan filename -> content map mein rakhte hain — taaki Python
-  // sandbox ko har run se pehle "current files" pata ho aur open("naam") se
-  // seedha padh sake. Naya chat shuru hone ya session switch hone par reset hota hai.
+  // unka content yahan filename -> content map mein rakhte hain — taaki
+  // request ke saath "current files" bhej sake. Naya chat shuru hone ya
+  // session switch hone par reset hota hai.
   let sandboxFiles = {};
-  let pyMsgId = 0;
-  const CODE_TIMEOUT_MS = 10000; // 10s — koi bhi accidental infinite loop hamesha ke liye na chale
+  // Server ka apna 15s hard-timeout hai (api/sandbox.js); yahan thoda buffer
+  // rakha hai taaki network latency ki wajah se time na khatam ho jaaye.
+  const CODE_TIMEOUT_MS = 20000;
 
-  // { ok, stdout, result?, error?, outputFiles? } return karta hai. Kabhi reject
-  // nahi hota — timeout/crash bhi ek "ok:false" result ki tarah resolve hota hai,
-  // taaki caller loop mein hamesha aage badh sake.
-  // onProgress(phase, detail) — optional callback, worker se aane wale live
-  // "reading/writing/installing/running" progress events ke liye. Ye final
-  // result se ALAG hai — bas UI update karne ke liye hai, promise isi se
-  // settle/resolve nahi hoti.
-  function runPythonSandboxed(code, onProgress) {
-    return new Promise((resolve) => {
-      const worker = getPyWorker();
-      const id = ++pyMsgId;
-      let settled = false;
+  // { ok, stdout, error?, outputFiles? } return karta hai. Kabhi reject nahi
+  // hota — network fail/timeout bhi ek "ok:false" result ki tarah resolve
+  // hota hai, taaki caller loop mein hamesha aage badh sake.
+  // onProgress(phase, detail) — abhi sirf ek baar 'running' fire hota hai
+  // (server se live phase-events abhi stream nahi hote — HTTP request/
+  // response hai, Worker jaisi postMessage progress nahi). Future mein
+  // /api/sandbox ko NDJSON stream banaya ja sakta hai agar live progress
+  // wapas chahiye.
+  async function runPythonSandboxed(code, onProgress) {
+    if (typeof onProgress === 'function') onProgress('running', '');
 
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        worker.removeEventListener('message', onMsg);
-        resolve({ ok: false, stdout: '', error: 'Timeout — code 10 second se zyada chal gaya, rok diya gaya.' });
-      }, CODE_TIMEOUT_MS);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CODE_TIMEOUT_MS);
+    try {
+      const resp = await fetch('/api/sandbox', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, inputFiles: sandboxFiles }),
+      });
+      clearTimeout(timer);
 
-      function onMsg(e) {
-        if (!e.data || e.data.id !== id) return;
-        if (e.data.progress) {
-          if (typeof onProgress === 'function') onProgress(e.data.phase, e.data.detail);
-          return; // progress event — promise abhi settle nahi karni
-        }
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        worker.removeEventListener('message', onMsg);
-        resolve(e.data);
+      let data;
+      try {
+        data = await resp.json();
+      } catch (parseErr) {
+        return { ok: false, stdout: '', error: `Sandbox se invalid response mila (HTTP ${resp.status})` };
       }
-      worker.addEventListener('message', onMsg);
-      worker.postMessage({ id, code, inputFiles: sandboxFiles });
-    });
+      if (!resp.ok && data.ok === undefined) {
+        return { ok: false, stdout: '', error: data.error || `Sandbox HTTP ${resp.status}` };
+      }
+      return data;
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = err && err.name === 'AbortError';
+      return {
+        ok: false,
+        stdout: '',
+        error: isAbort
+          ? `Timeout — code ${CODE_TIMEOUT_MS / 1000} second se zyada chal gaya, rok diya gaya.`
+          : 'Sandbox request fail hui (network/server issue): ' + String((err && err.message) || err),
+      };
+    }
   }
 
   // Code-run result ko ek "user" turn ki tarah wapas model ko bhejne ke liye
