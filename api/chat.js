@@ -41,7 +41,7 @@ const RAG_TOP_K = 3;
 const RAG_MIN_SIMILARITY = 0.55; // isse kam score wale chunks irrelevant maan ke drop
 const RAG_TIMEOUT_MS = 5000;
 
-async function embedQuery(text) {
+async function embedQuery(text, clientSignal) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !text) return null;
   try {
@@ -59,7 +59,7 @@ async function embedQuery(text) {
       if (!resp.ok) return null;
       const data = await resp.json();
       return Array.isArray(data?.embedding?.values) ? data.embedding.values : null;
-    }, RAG_TIMEOUT_MS);
+    }, RAG_TIMEOUT_MS, clientSignal);
   } catch (e) {
     return null; // Gemini down/slow/quota-out — RAG skip, chat continues normally
   }
@@ -80,9 +80,9 @@ function cosineSimilarity(a, b) {
 // User ke latest message ke base pe knowledge base se top-K relevant chunks
 // dhoondta hai, aur unhe ek system-note string mein format karta hai (ready
 // to append to SYSTEM_PROMPT). Koi match na mile / RAG disabled ho to ''.
-async function retrieveKnowledgeNote(query) {
+async function retrieveKnowledgeNote(query, clientSignal) {
   if (!KNOWLEDGE_CHUNKS.length) return '';
-  const qVector = await embedQuery(query);
+  const qVector = await embedQuery(query, clientSignal);
   if (!qVector) return '';
 
   const scored = KNOWLEDGE_CHUNKS
@@ -142,6 +142,8 @@ const SYSTEM_PROMPT = `# Chaman AI — System Prompt
 **web_search** → search first, answer after results, never fabricate on fail
 **run_code** → save to \`uploads/\` \`modify/\` \`outputs/\`; no success claim without confirmed output
 **termux_run** → one command at a time; if Bridge disconnected, tell user to connect, don't send command
+  - Same rule applies to plain \`\`\`bash/sh/shell fenced code blocks (they get the same Run button UI) — never put more than one runnable shell block in a single reply, even as "step 1/step 2/step 3"
+  - Multi-step task → give ONLY the first command + one line saying what it does, then STOP the reply there. Do not describe later steps, do not assume this command succeeded, do not pre-write the next command — user has to press "▶ Run" and its result comes back to you before you say anything else
 **ask_user** → last resort, one specific question
 **quran_quiz_start** → ask range → ask count → fire action
 
@@ -430,13 +432,24 @@ function extractAction(rawText) {
 const TIMEOUT_MS = 12000;
 const SEARCH_TIMEOUT_MS = 8000;
 
-async function withTimeout(promise, ms) {
+// externalSignal (optional) — client ka apna abort signal (jab wo Stop
+// dabaye ya connection band kare). Isse link karke rakhte hain taaki
+// TIMEOUT wale internal AbortController ke saath-saath, client-abort pe
+// bhi upstream provider fetch turant cancel ho jaaye (na ki chup-chaap
+// background mein poora chalta rahe aur token/cost waste ho).
+async function withTimeout(promise, ms, externalSignal) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
+  const onExternalAbort = () => ctrl.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) ctrl.abort();
+    else externalSignal.addEventListener('abort', onExternalAbort);
+  }
   try {
     return await promise(ctrl.signal);
   } finally {
     clearTimeout(timer);
+    if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -465,7 +478,28 @@ function toOpenAIMessages(messages, termuxStatus, knowledgeNote) {
   ];
 }
 
-async function callOpenAICompatible({ url, key, model, messages, termuxStatus, knowledgeNote, extraHeaders = {} }) {
+// Saare 4 providers OpenAI-compatible hain, isliye usage bhi usi standard
+// shape mein aata hai: { prompt_tokens, completion_tokens, total_tokens }.
+// Kisi wajah se missing/malformed ho, to null rakh dete hain — caller isse
+// "unknown" ki tarah handle karega, fake 0 nahi maanega.
+function normalizeUsage(rawUsage) {
+  return rawUsage && typeof rawUsage === 'object'
+    ? {
+        prompt: Number(rawUsage.prompt_tokens) || 0,
+        completion: Number(rawUsage.completion_tokens) || 0,
+        total: Number(rawUsage.total_tokens) || (Number(rawUsage.prompt_tokens) || 0) + (Number(rawUsage.completion_tokens) || 0),
+      }
+    : null;
+}
+
+// onDelta(chunkText) — optional, real token-by-token streaming callback:
+// har baar jab provider se naya text-chunk aata hai (SSE "data:" line),
+// turant isko call karte hain — caller (runProviderWithActions) isi se
+// live NDJSON 'token' events client ko bhejta hai, poora reply generate
+// hone ka wait kiye bina. clientSignal (dusra param, withTimeout ko jaata
+// hai) — agar client khud Stop dabaye ya connection band kare, to yahi
+// signal upstream fetch ko turant abort kar deta hai.
+async function callOpenAICompatible({ url, key, model, messages, termuxStatus, knowledgeNote, extraHeaders = {}, onDelta }, clientSignal) {
   return withTimeout(async (signal) => {
     const r = await fetch(url, {
       method: 'POST',
@@ -485,37 +519,76 @@ async function callOpenAICompatible({ url, key, model, messages, termuxStatus, k
         // generous for Hinglish chat replies; run_code/quran_quiz payloads
         // are short JSON/code blocks that comfortably fit under this.
         max_tokens: 1000,
+        stream: true,
+        // Streamed responses OpenAI-compatible APIs mein by default beech
+        // ke kisi bhi chunk mein "usage" nahi bhejte — sirf ye flag on karne
+        // se ek AAKHRI extra chunk aata hai jisme sirf usage hota hai
+        // (empty choices ke saath). Groq/OpenRouter/Cerebras teeno isko
+        // support karte hain; agar koi na kare to bas usage null reh
+        // jaayega (already null-safe hai neeche).
+        stream_options: { include_usage: true },
       }),
     });
     if (!r.ok) {
       const body = await r.text().catch(() => '');
       throw new Error(`HTTP ${r.status} — ${body.slice(0, 200)}`);
     }
-    const data = await r.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty response from provider');
-    // Saare 4 providers OpenAI-compatible hain, isliye usage bhi usi
-    // standard shape mein aata hai: { prompt_tokens, completion_tokens,
-    // total_tokens }. Kisi wajah se missing/malformed ho (kabhi kabhi
-    // koi provider usage field hi nahi bhejta), to null rakh dete hain —
-    // caller isse "unknown" ki tarah handle karega, fake 0 nahi maanega.
-    const rawUsage = data?.usage;
-    const usage = rawUsage && typeof rawUsage === 'object'
-      ? {
-          prompt: Number(rawUsage.prompt_tokens) || 0,
-          completion: Number(rawUsage.completion_tokens) || 0,
-          total: Number(rawUsage.total_tokens) || (Number(rawUsage.prompt_tokens) || 0) + (Number(rawUsage.completion_tokens) || 0),
+
+    if (!r.body || !r.body.getReader) {
+      // Fallback: is runtime mein streaming reader available nahi hai
+      // (bahut purana/unusual case) — poora response ek object ki tarah
+      // parse karo. Isse stream: true bheja tha isliye ho sakta hai ye
+      // fail ho, us case mein bhi crash na ho isliye try/catch se guard.
+      const data = await r.json().catch(() => null);
+      const text = data?.choices?.[0]?.message?.content;
+      if (!text) throw new Error('Empty response from provider');
+      if (onDelta) onDelta(text);
+      return { text, model: data?.model || model, usage: normalizeUsage(data?.usage) };
+    }
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    let usage = null;
+    let respModel = model;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let nlIndex;
+      while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nlIndex).trim();
+        buffer = buffer.slice(nlIndex + 1);
+        if (!line || !line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') continue;
+
+        let evt;
+        try { evt = JSON.parse(payload); } catch { continue; } // ek-do malformed SSE line se poora stream mat todo
+
+        if (evt?.model) respModel = evt.model;
+        const delta = evt?.choices?.[0]?.delta?.content;
+        if (typeof delta === 'string' && delta) {
+          fullText += delta;
+          if (onDelta) onDelta(delta);
         }
-      : null;
-    return { text, model: data?.model || model, usage };
-  }, TIMEOUT_MS);
+        if (evt?.usage) usage = normalizeUsage(evt.usage);
+      }
+    }
+
+    if (!fullText) throw new Error('Empty response from provider');
+    return { text: fullText, model: respModel, usage };
+  }, TIMEOUT_MS, clientSignal);
 }
 
 const PROVIDERS = [
   {
     name: 'Groq',
     envKey: 'GROQ_API_KEY',
-    run: (key, messages, termuxStatus, knowledgeNote) =>
+    run: (key, messages, termuxStatus, knowledgeNote, onDelta, clientSignal) =>
       callOpenAICompatible({
         url: 'https://api.groq.com/openai/v1/chat/completions',
         key,
@@ -523,12 +596,13 @@ const PROVIDERS = [
         messages,
         termuxStatus,
         knowledgeNote,
-      }),
+        onDelta,
+      }, clientSignal),
   },
   {
     name: 'OpenRouter',
     envKey: 'OPENROUTER_API_KEY',
-    run: (key, messages, termuxStatus, knowledgeNote) =>
+    run: (key, messages, termuxStatus, knowledgeNote, onDelta, clientSignal) =>
       callOpenAICompatible({
         url: 'https://openrouter.ai/api/v1/chat/completions',
         key,
@@ -548,16 +622,17 @@ const PROVIDERS = [
         messages,
         termuxStatus,
         knowledgeNote,
+        onDelta,
         extraHeaders: {
           'HTTP-Referer': 'https://chaman-ai.vercel.app',
           'X-Title': 'Chaman AI',
         },
-      }),
+      }, clientSignal),
   },
   {
     name: 'Cerebras',
     envKey: 'CEREBRAS_API_KEY',
-    run: (key, messages, termuxStatus, knowledgeNote) =>
+    run: (key, messages, termuxStatus, knowledgeNote, onDelta, clientSignal) =>
       callOpenAICompatible({
         url: 'https://api.cerebras.ai/v1/chat/completions',
         key,
@@ -565,7 +640,8 @@ const PROVIDERS = [
         messages,
         termuxStatus,
         knowledgeNote,
-      }),
+        onDelta,
+      }, clientSignal),
   },
   // Mistral REMOVED from the default fallback chain (2026-08-05):
   // Mistral has no genuinely "free" model (unlike OpenRouter's ":free" tag) —
@@ -579,7 +655,7 @@ const PROVIDERS = [
     ? [{
         name: 'Mistral',
         envKey: 'MISTRAL_API_KEY',
-        run: (key, messages, termuxStatus, knowledgeNote) =>
+        run: (key, messages, termuxStatus, knowledgeNote, onDelta, clientSignal) =>
           callOpenAICompatible({
             url: 'https://api.mistral.ai/v1/chat/completions',
             key,
@@ -587,7 +663,8 @@ const PROVIDERS = [
             messages,
             termuxStatus,
             knowledgeNote,
-          }),
+            onDelta,
+          }, clientSignal),
       }]
     : []),
 ];
@@ -599,7 +676,7 @@ const PROVIDERS = [
 // koi scraping/regex nahi chahiye. Free tier: 1000 searches/month, no card.
 // Env var chahiye: TAVILY_API_KEY (Vercel → Settings → Environment Variables)
 
-async function performWebSearch(query) {
+async function performWebSearch(query, clientSignal) {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) {
     throw new Error('TAVILY_API_KEY set nahi hai Vercel env vars mein');
@@ -627,7 +704,7 @@ async function performWebSearch(query) {
       url: item.url || '',
       snippet: item.content || '',
     }));
-  }, SEARCH_TIMEOUT_MS);
+  }, SEARCH_TIMEOUT_MS, clientSignal);
 }
 
 function formatSearchResultsForModel(query, results) {
@@ -640,6 +717,68 @@ function formatSearchResultsForModel(query, results) {
   return `[Web search results for "${query}":]\n${lines.join('\n\n')}\n\n[Inn results ke base pe user ko seedha, natural Hinglish jawab de — kisi bhi line ko word-for-word copy mat kar, apne shabdon mein summarize kar. Relevant ho toh source (site name) mention kar sakta hai.]`;
 }
 
+// ── Live token streaming, safely (action-tag leak guard) ───────────────
+// Provider se chunk-by-chunk text aata hai — usko turant client ko forward
+// kar dena "real streaming" hai, lekin agar model ek [ACTION:...]{...}[/ACTION]
+// tag bhej raha hai (jo purely internal protocol hai, kabhi user ko nahi
+// dikhna chahiye — extractAction isse baad mein poore text pe hi detect kar
+// paata hai), to raw JSON/tag characters bhi ek-ek karke leak ho jaayenge
+// jab tak hum poora tag na dekh lein. Isse bachne ke liye: jab tak buffer
+// mein in dono markers ka koi bhi partial-prefix nahi dikh raha, safe text
+// turant flush karo; jaise hi kisi marker ka poora match mil jaaye, us point
+// se aage is call ke liye streaming HAMESHA ke liye band kar do (action ka
+// baaki text — JSON payload/tag — kabhi bhi live stream nahi hota, jaisa
+// pehle bhi nahi hota tha).
+const ACTION_STREAM_MARKERS = ['[ACTION:', '```ACTION:'];
+
+function holdBackLength(buffer, markers) {
+  let maxHold = 0;
+  for (const marker of markers) {
+    const maxLen = Math.min(marker.length - 1, buffer.length);
+    for (let len = maxLen; len >= 1; len--) {
+      if (marker.startsWith(buffer.slice(buffer.length - len))) {
+        if (len > maxHold) maxHold = len;
+        break;
+      }
+    }
+  }
+  return maxHold;
+}
+
+// Ek naya "safe streamer" banata hai — provider.run() ko isi ko onDelta ki
+// tarah pass karo. emitToken(safeText) sirf tab call hota hai jab wo text
+// guaranteed action-tag ka hissa nahi hai.
+function createSafeStreamer(emitToken) {
+  let flushed = '';
+  let raw = '';
+  let actionLocked = false;
+  return function onDelta(delta) {
+    raw += delta;
+    if (actionLocked) return;
+    const unflushed = raw.slice(flushed.length);
+
+    let cutIdx = -1;
+    for (const marker of ACTION_STREAM_MARKERS) {
+      const idx = unflushed.indexOf(marker);
+      if (idx !== -1 && (cutIdx === -1 || idx < cutIdx)) cutIdx = idx;
+    }
+    if (cutIdx !== -1) {
+      const safePart = unflushed.slice(0, cutIdx);
+      if (safePart) { emitToken(safePart); flushed += safePart; }
+      actionLocked = true; // is call ke liye ab kabhi kuch stream nahi hoga
+      return;
+    }
+
+    const hold = holdBackLength(unflushed, ACTION_STREAM_MARKERS);
+    const safeLen = unflushed.length - hold;
+    if (safeLen > 0) {
+      const safePart = unflushed.slice(0, safeLen);
+      emitToken(safePart);
+      flushed += safePart;
+    }
+  };
+}
+
 // Provider ko call karta hai, aur agar reply ek web_search action maange toh
 // khud search perform karke, results wapas model ko de deta hai — jab tak
 // model final (non-search) answer na de de, ya max iterations khatam na ho jaayein.
@@ -647,13 +786,18 @@ function formatSearchResultsForModel(query, results) {
 // onStatus(event) — optional callback, jo har live-search phase pe fire hota hai
 // (searching / found / search_failed / answering). Isse frontend real-time
 // mein "search chal rahi hai" animation dikha sakta hai, sirf baad mein nahi.
+// onToken(text) — optional callback, jo har SAFE (non-action) text-chunk pe
+// fire hota hai jaise-jaise model generate karta hai — real streaming ke liye.
+// clientSignal — client ka abort signal, upstream provider/search calls tak
+// forward hota hai taaki Stop dabane par turant sab cancel ho jaaye.
 const MAX_TOOL_ITERATIONS = 3;
 
-async function runProviderWithActions(provider, key, initialMessages, onStatus, termuxStatus, knowledgeNote) {
+async function runProviderWithActions(provider, key, initialMessages, onStatus, termuxStatus, knowledgeNote, onToken, clientSignal) {
   let messages = initialMessages;
   let lastText = '';
   let lastModel = '';
   const emit = typeof onStatus === 'function' ? onStatus : () => {};
+  const emitToken = typeof onToken === 'function' ? onToken : () => {};
 
   // Ek user-turn ke andar (JSON-retry ya web_search ke wajah se) provider
   // ko multiple baar call karna pad sakta hai — har baar ka token cost
@@ -669,7 +813,8 @@ async function runProviderWithActions(provider, key, initialMessages, onStatus, 
   }
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
-    const { text, model, usage } = await provider.run(key, messages, termuxStatus, knowledgeNote);
+    const streamer = createSafeStreamer(emitToken);
+    const { text, model, usage } = await provider.run(key, messages, termuxStatus, knowledgeNote, streamer, clientSignal);
     addUsage(usage);
     lastText = text;
     lastModel = model;
@@ -704,7 +849,7 @@ async function runProviderWithActions(provider, key, initialMessages, onStatus, 
 
       let searchNote;
       try {
-        const results = await performWebSearch(query);
+        const results = await performWebSearch(query, clientSignal);
         emit({ phase: 'found', query, count: results.length });
         searchNote = formatSearchResultsForModel(query, results);
       } catch (err) {
@@ -850,26 +995,49 @@ export default async function handler(req, res) {
   });
   if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
-  const write = (event) => res.write(JSON.stringify(event) + '\n');
+  // Client (browser) ne connection band kar di — ya to Stop button dabaya,
+  // ya tab/page hi band kar diya. res.end() hone ke BAAD bhi 'close' fire
+  // hota hai (normal completion), isliye res.writableEnded check karke hi
+  // real "user ne beech mein roka" case pakadte hain. Jab ye ho jaaye:
+  // (1) aage koi write() na kare (client sun hi nahi raha, error aayega),
+  // (2) upstream provider/search fetch turant abort ho (token/cost bachaye).
+  let clientAborted = false;
+  const clientAbortController = new AbortController();
+  req.on('close', () => {
+    if (!res.writableEnded) {
+      clientAborted = true;
+      clientAbortController.abort();
+    }
+  });
+
+  // res.write khud throw/error kar sakta hai agar connection already band
+  // ho chuki hai (race condition — 'close' event thoda late fire ho sakta
+  // hai) — isliye har write ko guard karte hain, chup-chaap drop kar do.
+  const write = (event) => {
+    if (clientAborted || res.writableEnded) return;
+    try { res.write(JSON.stringify(event) + '\n'); } catch (e) { clientAborted = true; }
+  };
   const emitStatus = (statusEvent) => write({ type: 'status', ...statusEvent });
+  const emitToken = (text) => { if (text) write({ type: 'token', text }); };
 
   // RAG retrieval — ek hi baar is poore turn ke liye (saare providers/
   // iterations isi note ko reuse karte hain, dobara embed nahi karte).
   // KNOWLEDGE_CHUNKS khaali ho ya GEMINI_API_KEY na ho to ye turant ''
   // return karta hai — chat bilkul normal chalti rahegi, kuch break nahi hota.
   let knowledgeNote = '';
-  if (KNOWLEDGE_CHUNKS.length) {
+  if (KNOWLEDGE_CHUNKS.length && !clientAborted) {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
     const ragQuery = lastUserMsg ? messageContentToText(lastUserMsg.content) : '';
     if (ragQuery) {
       emitStatus({ phase: 'retrieving' });
-      knowledgeNote = await retrieveKnowledgeNote(ragQuery);
+      knowledgeNote = await retrieveKnowledgeNote(ragQuery, clientAbortController.signal);
     }
   }
 
   const errors = [];
 
   for (const provider of PROVIDERS) {
+    if (clientAborted) break; // user ne beech mein hi rok diya — agla provider try karna waste hai
     const keys = splitKeys(process.env[provider.envKey]);
     if (!keys.length) {
       errors.push(`${provider.name}: env var ${provider.envKey} set hi nahi hai (ya khaali hai)`);
@@ -877,17 +1045,28 @@ export default async function handler(req, res) {
     }
 
     for (let i = 0; i < keys.length; i++) {
+      if (clientAborted) break;
       const key = keys[i];
       try {
-        const { text, model, action, usage } = await runProviderWithActions(provider, key, messages, emitStatus, termuxStatus, knowledgeNote);
+        const { text, model, action, usage } = await runProviderWithActions(
+          provider, key, messages, emitStatus, termuxStatus, knowledgeNote, emitToken, clientAbortController.signal
+        );
         write({ type: 'final', reply: text, provider: provider.name, model, action, usage });
         res.end();
         return;
       } catch (err) {
+        if (clientAborted) break; // abort ki wajah se hi fail hua — real provider-error nahi hai, log mat kar
         errors.push(`${provider.name} (key ${i + 1}/${keys.length}): ${err.message}`);
         // is provider ki agli key try karo; sab keys khatam ho jaye toh agle provider pe jao
       }
     }
+  }
+
+  if (clientAborted) {
+    // User ne khud rok diya — koi error response bhejne ki zaroorat nahi
+    // (client sun hi nahi raha), bas connection clean-up ho jaane do.
+    if (!res.writableEnded) res.end();
+    return;
   }
 
   console.error('[chat.js] Sab providers/keys fail ho gaye:\n' + errors.join('\n'));

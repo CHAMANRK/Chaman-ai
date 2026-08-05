@@ -492,6 +492,7 @@
     border-radius:2px;
     max-width:100%; /* .wrap already caps width at 82% — bubble should fill it fully, not re-shrink */
   }
+  .row.assistant .wrap .continuation-bubble{margin-top:6px;}
   .bubble strong{color:var(--amber);font-weight:600;}
   .bubble em{font-style:italic;color:#f3ead8;}
   .bubble .inline-code{
@@ -1450,6 +1451,7 @@
   const $form = document.getElementById('form');
   const $input = document.getElementById('input');
   const $send = document.getElementById('send');
+  const DEFAULT_INPUT_PLACEHOLDER = $input.placeholder;
   const $dots = document.querySelectorAll('.chain .dot');
   const $tokenBadgeLast = document.getElementById('tokenBadgeLast');
   const $tokenBadgeSep = document.getElementById('tokenBadgeSep');
@@ -1484,6 +1486,32 @@
 
   let history = []; // {role, content, provider?, model?} — current session ki poori raw chat
   let busy = false;
+
+  // ── Termux/shell "ek waqt mein ek hi command" lock ───────────────────
+  // Jab bhi AI ke live (naye) response mein koi shell codeblock (```bash
+  // fenced ho ya [ACTION:termux_run] se aaya ho) render hota hai jo abhi
+  // tak Run nahi hua, uska id yahan add ho jaata hai aur input/send locked
+  // ho jaata hai. Run poora hone (exit ya error) pe id nikal jaata hai —
+  // khaali hote hi wapas unlock. Session history reload (animate=false)
+  // ke waqt ye track nahi hota, warna purane un-run blocks hamesha ke liye
+  // input lock kar dete.
+  let pendingRunIds = new Set();
+
+  function setRunLock(locked) {
+    $input.disabled = locked;
+    $send.disabled = locked;
+    $input.placeholder = locked ? 'Pehle upar wali command "▶ Run" karo…' : DEFAULT_INPUT_PLACEHOLDER;
+  }
+
+  function markPendingRun(id) {
+    pendingRunIds.add(id);
+    setRunLock(true);
+  }
+
+  function clearPendingRun(id) {
+    pendingRunIds.delete(id);
+    setRunLock(pendingRunIds.size > 0);
+  }
   let currentAbortController = null; // jo bhi /api/chat request abhi in-flight hai, uska controller — Stop button isi ko abort karta hai
   let activeSessionId = null; // null = abhi tak koi reply nahi aaya, session bana hi nahi
 
@@ -1749,7 +1777,7 @@
   // web_search/run_code jaisa hi pattern, isliye AI ko poora context milta hai.
   function formatTermuxResultForModel(command, output, exitCode) {
     const trimmed = (output || '').trim();
-    return `[Termux command run hui:]\n$ ${command}\n\n[Output:]\n${trimmed || '(koi output nahi tha)'}\n\n[Exit code: ${exitCode}]\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
+    return `[Termux command run hui:]\n$ ${command}\n\n[Output:]\n${trimmed || '(koi output nahi tha)'}\n\n[Exit code: ${exitCode}]\n\n[Iske base pe user ko seedha, natural Hinglish jawab de. Agar ye ek multi-step kaam ka hissa tha aur agla command bhi chalana hai, to sirf AGLA EK command de aur wahin ruk ja — usse aage ke steps mat likh, jab tak uska bhi result wapas na aaye.]`;
   }
 
   function loadSessions() {
@@ -2510,12 +2538,20 @@
     stickToBottom = true;
     sandboxFiles = {}; // purani session ki attached files ka content persist nahi hota, isliye fresh
     clearMain();
+    let lastAssistantTarget = null;
     for (const msg of history) {
       if (msg.role === 'user') {
+        if (msg.silent) continue; // Termux run ka silent result — reload pe bhi bubble nahi dikhani (lastAssistantTarget yahin tak zinda rehta hai)
         addUserBubble(msg.displayText != null ? msg.displayText : msg.content, msg.files);
+        lastAssistantTarget = null;
       } else if (msg.role === 'assistant') {
         const tokLabel = msg.tokens && msg.tokens.total ? ` · ${formatTokenCount(msg.tokens.total)} tok` : '';
-        addAssistantBubble(msg.content, msg.provider ? `${msg.provider} · ${msg.model || ''}${tokLabel}` : null, false, false);
+        const metaText = msg.provider ? `${msg.provider} · ${msg.model || ''}${tokLabel}` : null;
+        if (msg.continuesPrevious && lastAssistantTarget) {
+          appendAssistantContinuation(lastAssistantTarget, msg.content, metaText, null, null, false);
+        } else {
+          lastAssistantTarget = addAssistantBubble(msg.content, metaText, false, false);
+        }
       }
     }
     const last = history[history.length - 1];
@@ -2954,8 +2990,12 @@
   const SHELL_LANGS = new Set(['bash', 'sh', 'shell', 'zsh', 'termux']);
 
   function codeBlockHtml(id) {
-    const { lang, code } = codeStore[id];
+    const { lang, code, live } = codeStore[id];
     const isShell = SHELL_LANGS.has((lang || '').toLowerCase());
+    // Live turn ka shell block bana hai aur abhi tak Run nahi hua — jab tak
+    // Run poora na ho, naya message bhejna lock rakhna hai (taaki AI ek
+    // command ke baad chup-chaap agla suggest na kar de).
+    if (isShell && live) markPendingRun(id);
 
     const actionsHtml = isShell
       ? `<div class="codeblock-actions">
@@ -3030,7 +3070,7 @@
     }
   }
 
-  function renderMarkdown(raw) {
+  function renderMarkdown(raw, live) {
     // step 0: LaTeX segments ko pehle nikaal lo (code blocks se bhi pehle,
     // taaki ```...``` ke andar ke \[ \] galti se match na ho jaayein — code
     // fences already literal backticks maangte hain jo alag hi handle hote
@@ -3040,7 +3080,7 @@
     // step 1: fenced code blocks nikaal ke placeholder line daal do (raw text par, escape se pehle)
     const withPlaceholders = withMathPlaceholders.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       const id = 'cb' + (cbCounter++);
-      codeStore[id] = { lang: lang || '', code: code.replace(/\n$/, '') };
+      codeStore[id] = { lang: lang || '', code: code.replace(/\n$/, ''), live: !!live };
       return `\u0000${id}\u0000`;
     });
 
@@ -3210,8 +3250,14 @@
           : `<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> Exit code ${code}`;
         exitLine.className = 'exit-line ' + (code === 0 ? 'ok' : 'fail');
         scrollBottom();
+        clearPendingRun(id);
         if (!busy) {
-          send(formatTermuxResultForModel(entry.code, fullOutput, code), `Termux run (exit ${code})`, []);
+          // Result chat mein alag se user-bubble ki tarah nahi dikhana — bas
+          // silently AI ko agla context de do. Aur jawab bhi isi purani
+          // bubble (jisme ye command tha) ke andar continue ho, nayi bubble
+          // na bane.
+          const wrapEl = runBtn.closest('.wrap');
+          send(formatTermuxResultForModel(entry.code, fullOutput, code), null, [], true, { wrapEl });
         }
       },
       onError(message) {
@@ -3224,6 +3270,7 @@
         exitLine.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> ' + escapeHtml(message);
         exitLine.className = 'exit-line fail';
         scrollBottom();
+        clearPendingRun(id);
       },
     });
   };
@@ -3648,7 +3695,7 @@
     const command = payload && payload.command;
     if (typeof command !== 'string' || !command.trim()) return;
     const id = 'cb' + (cbCounter++);
-    codeStore[id] = { lang: 'bash', code: command.trim() };
+    codeStore[id] = { lang: 'bash', code: command.trim(), live: true };
     const holder = document.createElement('div');
     holder.innerHTML = codeBlockHtml(id);
     wrap.appendChild(holder.firstElementChild);
@@ -3869,6 +3916,67 @@
     scrollBottom(true);
   }
 
+  // Footer (meta line + Copy button) + action-widget + output-files —
+  // shared banata hai taaki addAssistantBubble aur appendAssistantContinuation
+  // (dono) isi ek jagah se footer banayein, duplicate logic na ho.
+  function buildMsgFooter(copyText, meta, wrap, action, outputFiles) {
+    const footer = document.createElement('div');
+    footer.className = 'msg-footer';
+
+    if (meta) {
+      const metaEl = document.createElement('span');
+      metaEl.className = 'meta';
+      metaEl.textContent = meta;
+      footer.appendChild(metaEl);
+    }
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'msg-copy-btn';
+    copyBtn.textContent = '⧉ Copy';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(copyText).then(() => {
+        copyBtn.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="copied"> Copied';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = '⧉ Copy';
+          copyBtn.classList.remove('copied');
+        }, 1500);
+      }).catch(() => {
+        copyBtn.textContent = 'Copy fail hua';
+        setTimeout(() => { copyBtn.textContent = '⧉ Copy'; }, 1500);
+      });
+    });
+    footer.appendChild(copyBtn);
+
+    wrap.appendChild(footer);
+    if (action) renderAction(action, wrap);
+    if (outputFiles && outputFiles.length) renderOutputFiles(outputFiles, wrap);
+    scrollBottom();
+  }
+
+  // Ek command ke Run poora hone ke baad AI ka agla jawab isi function se
+  // — NAYI bubble/row nahi banti, isi purani message ke "wrap" ke andar hi
+  // ek naya chunk jud jaata hai (jaise ek hi jawab beech mein ruk ke phir
+  // se chalu hua ho). Purana footer hata ke naya chunk ke baad wapas bana
+  // dete hain. wrapEl-level append use karte hain (na ki sirf bubble ke
+  // andar) taaki [ACTION:termux_run] wale command-widget (jo bubble ke
+  // BAHAR, wrap mein render hote hain) ke baad bhi ye sahi order mein aaye.
+  function appendAssistantContinuation(target, text, meta, action, outputFiles, animate) {
+    const { wrapEl } = target;
+    const oldFooter = wrapEl.querySelector('.msg-footer');
+    if (oldFooter) oldFooter.remove();
+
+    const chunk = document.createElement('div');
+    chunk.className = 'bubble continuation-bubble';
+    chunk.innerHTML = renderMarkdown(text, !!animate);
+    wrapEl.appendChild(chunk);
+    scrollBottom();
+
+    const finish = () => buildMsgFooter(wrapEl.textContent, meta, wrapEl, action, outputFiles);
+    if (animate) typewriterReveal(chunk, finish); else finish();
+  }
+
   function addAssistantBubble(text, meta, isError, animate, action, outputFiles) {
     // Backend action-parse fail ho jaaye aur text bhi khaali ho, to poori
     // bubble blank na dikhe (jaisa pehle "Groq · model" + Copy button ke
@@ -3885,46 +3993,14 @@
     if (isError) {
       bubble.textContent = text;
     } else {
-      bubble.innerHTML = renderMarkdown(text);
+      bubble.innerHTML = renderMarkdown(text, !!animate);
     }
     wrap.appendChild(bubble);
     row.appendChild(wrap);
     $main.appendChild(row);
 
     function attachMeta() {
-      const footer = document.createElement('div');
-      footer.className = 'msg-footer';
-
-      if (meta) {
-        const metaEl = document.createElement('span');
-        metaEl.className = 'meta';
-        metaEl.textContent = meta;
-        footer.appendChild(metaEl);
-      }
-
-      const copyBtn = document.createElement('button');
-      copyBtn.type = 'button';
-      copyBtn.className = 'msg-copy-btn';
-      copyBtn.textContent = '⧉ Copy';
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(text).then(() => {
-          copyBtn.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="copied"> Copied';
-          copyBtn.classList.add('copied');
-          setTimeout(() => {
-            copyBtn.textContent = '⧉ Copy';
-            copyBtn.classList.remove('copied');
-          }, 1500);
-        }).catch(() => {
-          copyBtn.textContent = 'Copy fail hua';
-          setTimeout(() => { copyBtn.textContent = '⧉ Copy'; }, 1500);
-        });
-      });
-      footer.appendChild(copyBtn);
-
-      wrap.appendChild(footer);
-      if (action) renderAction(action, wrap);
-      if (outputFiles && outputFiles.length) renderOutputFiles(outputFiles, wrap);
-      scrollBottom();
+      buildMsgFooter(text, meta, wrap, action, outputFiles);
     }
 
     if (!isError && animate) {
@@ -3934,17 +4010,80 @@
       attachMeta();
     }
     scrollBottom();
+    return { bubbleEl: bubble, wrapEl: wrap };
   }
 
   function lightDot(providerName) {
     $dots.forEach(d => d.classList.toggle('live', d.dataset.provider === providerName));
   }
 
+  // Live streaming ke dauraan bana raha bubble — jaise-jaise 'token' events
+  // aate hain, isi object ke andar text accumulate hota hai aur bubble ka
+  // innerHTML baar-baar (poora, live-mode) re-render hota hai. Real
+  // character-by-character network streaming hi ab "typing" effect hai —
+  // koi alag fake-typewriter animation ab yahan nahi chalti.
+  function ensureStreamBubble(state, thinkingRow, continueInto) {
+    if (state.streamed) return state.streamed;
+    if (thinkingRow && thinkingRow.parentNode) thinkingRow.remove();
+
+    if (continueInto && continueInto.wrapEl && document.body.contains(continueInto.wrapEl)) {
+      const oldFooter = continueInto.wrapEl.querySelector('.msg-footer');
+      if (oldFooter) oldFooter.remove();
+      const chunk = document.createElement('div');
+      chunk.className = 'bubble continuation-bubble typing';
+      continueInto.wrapEl.appendChild(chunk);
+      state.streamed = { bubbleEl: chunk, wrapEl: continueInto.wrapEl, rowEl: null, raw: '' };
+    } else {
+      const row = document.createElement('div');
+      row.className = 'row assistant';
+      const wrap = document.createElement('div');
+      wrap.className = 'wrap';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble typing';
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      $main.appendChild(row);
+      state.streamed = { bubbleEl: bubble, wrapEl: wrap, rowEl: row, raw: '' };
+    }
+    scrollBottom();
+    return state.streamed;
+  }
+
+  let lastStreamTick = 0;
+  function appendStreamToken(state, thinkingRow, continueInto, text) {
+    const s = ensureStreamBubble(state, thinkingRow, continueInto);
+    s.raw += text;
+    // live=false yahan jaanbujh ke: renderMarkdown har call pe naye
+    // codeStore/mathStore ids allocate karta hai (poora re-parse), aur agar
+    // koi shell ```code``` fence stream ho raha ho to live=true har
+    // intermediate render pe ek NAYA pendingRun-lock id daal deta — jo kabhi
+    // clear nahi hota (asli Run to sirf FINAL id pe hoga), aur chat hamesha
+    // ke liye locked reh jaati. Isliye beech mein hamesha false; asli
+    // "fresh message" registration sirf ek baar, finalize par (live=true).
+    s.bubbleEl.innerHTML = renderMarkdown(s.raw, false);
+    // Real network chunks mein already-multiple characters hote hain, isliye
+    // har chunk pe tick bajaana zaroorat se zyada dense ho jaata — throttle
+    // karte hain taaki old fake-typewriter jaisi hi natural rhythm lage.
+    const now = performance.now();
+    if (now - lastStreamTick > 60) {
+      lastStreamTick = now;
+      SoundFX.aiTick();
+    }
+    scrollBottom();
+  }
+
   // Ek single /api/chat round-trip: request bhejta hai, NDJSON stream padhta
-  // hai (live web_search status animate karte hue), aur { finalEvent, errorEvent }
-  // return karta hai. thinkingRow already-mounted honi chahiye (caller banata hai).
-  async function fetchExchange(apiMessages, thinkingRow) {
+  // hai — live web_search/code status update karte hue AUR asli text-tokens
+  // ko live bubble mein append karte hue (real streaming). thinkingRow
+  // already-mounted honi chahiye (caller banata hai). continueInto (optional)
+  // diya ho to naya row/bubble banane ki jagah usi purani message ke wrap
+  // mein continuation-chunk ki tarah stream hota hai.
+  // Return: { finalEvent, errorEvent, aborted, streamed } — streamed (agar
+  // koi text live stream hua ho) caller ko final render/footer attach karne
+  // ke liye milta hai, taaki dobara duplicate bubble na bane.
+  async function fetchExchange(apiMessages, thinkingRow, continueInto) {
     let searchRow = null; // pehli 'status' event aane pe hi banti hai
+    const state = { streamed: null };
     const controller = new AbortController();
     currentAbortController = controller;
     try {
@@ -3979,10 +4118,12 @@
 
             if (event.type === 'status') {
               if (!searchRow) {
-                thinkingRow.remove();
+                if (thinkingRow && thinkingRow.parentNode) thinkingRow.remove();
                 searchRow = addSearchStatus();
               }
               updateSearchStatus(searchRow, event.phase, event.query, event.count);
+            } else if (event.type === 'token') {
+              appendStreamToken(state, thinkingRow, continueInto, event.text);
             } else if (event.type === 'final') {
               finalEvent = event;
             } else if (event.type === 'error') {
@@ -3993,7 +4134,8 @@
       } else {
         // Fallback: streaming reader available nahi hai (bahut purana browser) —
         // seedha JSON ki tarah parse karo (naya backend NDJSON bhejta hai, isliye
-        // ye path sirf ek safety net hai).
+        // ye path sirf ek safety net hai). Isme koi live token nahi aata,
+        // isliye 'streamed' khaali rehta hai aur caller purani jagah instant render karega.
         const raw = await res.text();
         for (const line of raw.split('\n')) {
           const trimmed = line.trim();
@@ -4007,18 +4149,61 @@
       }
 
       if (searchRow) searchRow.remove();
-      return { finalEvent, errorEvent };
+      return { finalEvent, errorEvent, streamed: state.streamed };
     } catch (err) {
       if (searchRow) searchRow.remove();
       // User ne khud Stop dabaya — ye ek real error nahi hai, isliye alag se
       // flag karte hain taaki caller koi error-bubble na dikhaye, chup-chaap ruk jaaye.
       if (err && err.name === 'AbortError') {
-        return { finalEvent: null, errorEvent: null, aborted: true };
+        return { finalEvent: null, errorEvent: null, aborted: true, streamed: state.streamed };
       }
-      return { finalEvent: null, errorEvent: { error: 'Network error — connection check kar.' } };
+      return { finalEvent: null, errorEvent: { error: 'Network error — connection check kar.' }, streamed: state.streamed };
     } finally {
       if (currentAbortController === controller) currentAbortController = null;
     }
+  }
+
+  // fetchExchange ke live-streamed bubble (agar bana ho) ko final text ke
+  // saath finalize karta hai (poora, non-live re-render — code blocks ka
+  // "still typing" state hata ke asli Run/Copy UI bana deta hai), aur footer
+  // (meta + action widget) attach karta hai. Agar koi live bubble nahi bana
+  // tha (pure action-only turn, ya non-streaming fallback), to purani tarah
+  // ek naya bubble instant bana deta hai — na ki fake-typewriter animate.
+  function finalizeStreamedOrNew(streamed, text, meta, action, outputFiles) {
+    if (streamed && streamed.bubbleEl) {
+      // live=true: ye ab is turn ka authoritative, ek-baar-hi render hai —
+      // isi pass mein shell code-fence (agar koi ho) ka asli id register
+      // hota hai aur zaroorat pade to pending-run lock lagta hai (jaisa
+      // pehle full-text ke pehle hi renderMarkdown call mein hota tha).
+      streamed.bubbleEl.innerHTML = renderMarkdown(text, true);
+      streamed.bubbleEl.classList.remove('typing');
+      buildMsgFooter(text, meta, streamed.wrapEl, action, outputFiles);
+      return { bubbleEl: streamed.bubbleEl, wrapEl: streamed.wrapEl };
+    }
+    // Koi live text stream nahi hua tha (pure action turn, ya non-streaming
+    // fallback) — purani tarah instant/animate render (animate=true taaki
+    // shell-fence lock behavior bhi wahi rahe jo pehle tha).
+    return addAssistantBubble(text, meta, false, true, action, outputFiles);
+  }
+
+  // User ne Stop dabaya jab bubble abhi live stream ho rahi thi — jitna text
+  // aa chuka tha usi ko final maan ke bubble finalize kar do (poora ura mat
+  // do), taaki "beech mein roka" ka matlab ho ki jo likha ja chuka tha wo
+  // dikhta rahe, na ki poori bubble ghayab ho jaaye. Kuch bhi stream nahi
+  // hua tha (turant hi rok diya) to khaali bubble/row hata do.
+  function finalizeAbortedStream(streamed) {
+    if (!streamed || !streamed.bubbleEl) return;
+    const text = streamed.raw.trim();
+    if (!text) {
+      if (streamed.rowEl) streamed.rowEl.remove();
+      else streamed.bubbleEl.remove();
+      return;
+    }
+    streamed.bubbleEl.innerHTML = renderMarkdown(streamed.raw, false);
+    streamed.bubbleEl.classList.remove('typing');
+    buildMsgFooter(streamed.raw, 'Rok diya gaya', streamed.wrapEl, null, []);
+    history.push({ role: 'assistant', content: streamed.raw });
+    persistTurn();
   }
 
   // Agar model ne [ACTION:run_code] maanga hai, to (web_search ki tarah, bas
@@ -4028,11 +4213,16 @@
   // khatam na ho jaayein.
   const MAX_CODE_ITERATIONS = 3;
 
-  async function send(text, displayText, filesMeta) {
+  async function send(text, displayText, filesMeta, silent, continueInto) {
     displayText = displayText != null ? displayText : text;
     filesMeta = filesMeta || [];
-    history.push({ role: 'user', content: text, displayText, files: filesMeta });
-    addUserBubble(displayText, filesMeta);
+    // silent=true: Termux run ka result jaisi cheezein — AI ke context mein
+    // jaani chahiye lekin chat mein ek alag "Termux run (exit N)" bubble ki
+    // tarah dikhni nahi chahiye (result already codeblock ke andar dikh
+    // chuka hai). Flag history mein bhi save hota hai taaki session reload
+    // pe bhi ye dobara na dikhe.
+    history.push({ role: 'user', content: text, displayText, files: filesMeta, silent: !!silent });
+    if (!silent) addUserBubble(displayText, filesMeta);
     $input.value = '';
     $input.style.height = 'auto';
 
@@ -4046,21 +4236,30 @@
 
       while (true) {
         const thinkingRow = addThinking();
-        const { finalEvent, errorEvent, aborted } = await fetchExchange(
+        const { finalEvent, errorEvent, aborted, streamed } = await fetchExchange(
           history.map(m => ({ role: m.role, content: m.content })),
-          thinkingRow
+          thinkingRow,
+          continueInto
         );
-        thinkingRow.remove();
+        if (thinkingRow.parentNode) thinkingRow.remove();
 
         if (aborted) {
-          // User ne khud Stop dabaya — koi error bubble nahi, bas chup-chaap
-          // ruk jao. Is turn ka partial history (agar koi ho) already push
-          // nahi hua tha, isliye state consistent rehta hai.
+          // User ne khud Stop dabaya — jo text live-stream ho chuka tha
+          // (agar koi ho) usi ko final maan ke bubble finalize kar do, taaki
+          // "rokna" ka matlab "sab kuch ghayab" na ho. Turant hi roka tha
+          // (kuch bhi stream nahi hua) to bas chup-chaap ruk jao.
+          finalizeAbortedStream(streamed);
           return;
         }
 
         if (errorEvent) {
           lightDot(null);
+          // Agar error se pehle kuch text stream ho chuka tha (rare — kabhi
+          // provider beech mein hi drop ho jaaye), us khaali/partial bubble
+          // ko hata ke hi error dikhao, warna do bubbles dikhengi.
+          if (streamed && streamed.bubbleEl && !streamed.raw.trim()) {
+            if (streamed.rowEl) streamed.rowEl.remove(); else streamed.bubbleEl.remove();
+          }
           let errText = errorEvent.error || 'Kuch gadbad ho gayi.';
           if (Array.isArray(errorEvent.details) && errorEvent.details.length) {
             errText += '\n\n— Details —\n' + errorEvent.details.join('\n');
@@ -4096,10 +4295,11 @@
             });
             persistTurn();
             lightDot(finalEvent.provider);
-            addAssistantBubble(
+            finalizeStreamedOrNew(
+              streamed,
               finalEvent.reply,
               `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`,
-              false, true, null, producedFiles
+              null, producedFiles
             );
             return;
           }
@@ -4132,27 +4332,43 @@
         }
 
         // run_code nahi maanga gaya (ya iterations khatam) — ye final answer hai.
+        const canContinueBubble = !!(continueInto && continueInto.wrapEl && document.body.contains(continueInto.wrapEl));
         history.push({
           role: 'assistant',
           content: finalEvent.reply,
           provider: finalEvent.provider,
           model: finalEvent.model,
           tokens: turnTokens ? { total: turnTokens } : undefined,
+          continuesPrevious: canContinueBubble,
         });
         persistTurn(); // pehla successful reply aate hi session (agar naya hai) auto-ban jaata hai
         lightDot(finalEvent.provider);
-        addAssistantBubble(
-          finalEvent.reply,
-          `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`,
-          false, true, finalEvent.action, producedFiles
-        );
+        const metaText = `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`;
+        if (canContinueBubble && !(streamed && streamed.bubbleEl)) {
+          // Command ka Run poora hua tha — text live stream nahi hua (jaise
+          // ek pure-action turn), isliye purani tarah instant continuation
+          // chunk jod do (isi purani wali mein, nayi bubble nahi). animate=
+          // true taaki agar reply ke andar khud koi fresh shell code-fence
+          // ho to uska pending-run lock bhi sahi se lagta rahe.
+          appendAssistantContinuation(continueInto, finalEvent.reply, metaText, finalEvent.action, producedFiles, true);
+        } else {
+          // Ya to text already live stream ho chuka tha (streamed.bubbleEl
+          // maujood hai — chahe continuation ke andar ho ya naya row), ya
+          // koi continuation target hi nahi tha — dono cases finalize karo.
+          finalizeStreamedOrNew(streamed, finalEvent.reply, metaText, finalEvent.action, producedFiles);
+        }
         return;
       }
     } finally {
       busy = false;
       setSendButtonBusy(false);
       currentAbortController = null;
-      $input.focus();
+      // setSendButtonBusy upar $send.disabled ko unconditionally false kar
+      // deta hai — agar is turn mein koi shell command abhi bhi un-run pada
+      // hai to lock wapas laga do, warna user Run dabaye bina hi agla
+      // message bhej payega.
+      setRunLock(pendingRunIds.size > 0);
+      if (!pendingRunIds.size) $input.focus();
     }
   }
 
