@@ -2,6 +2,7 @@
   "name": "chaman-ai-termux-bridge",
   "version": "1.0.0",
   "description": "Local bridge server — apne Termux device ko Chaman AI se connect karta hai (loopback-only, token-gated).",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
