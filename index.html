@@ -510,6 +510,9 @@
     border-radius:8px;
     overflow:hidden;
     background:var(--ink-3);
+    white-space:normal; /* .bubble ka pre-wrap yahan inherit ho ke header/pre/output ke beech ke
+                            raw template-literal newlines+indentation ko visible line-break bana raha
+                            tha — isi se codeblock ke andar bohut zyada spacing dikh rahi thi. */
   }
   .codeblock-head{
     display:flex;
@@ -4170,6 +4173,16 @@
   // tha (pure action-only turn, ya non-streaming fallback), to purani tarah
   // ek naya bubble instant bana deta hai — na ki fake-typewriter animate.
   function finalizeStreamedOrNew(streamed, text, meta, action, outputFiles) {
+    // addAssistantBubble() mein ye blank-text fallback pehle se tha, lekin
+    // live-streamed path (neeche wala if-branch) isse skip kar deta tha —
+    // isliye jab run_code MAX_CODE_ITERATIONS hit karta aur model ka aakhri
+    // call sirf action-tag (ya thoda leading whitespace) bhejta, cleanText
+    // khaali reh jaata aur ek visually-blank bubble final ban jaata tha
+    // (jabki tokens already consume ho chuke hote the). Ab dono paths se
+    // consistent behaviour milta hai.
+    if (!action && (!text || !text.trim())) {
+      text = 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
+    }
     if (streamed && streamed.bubbleEl) {
       // live=true: ye ab is turn ka authoritative, ek-baar-hi render hai —
       // isi pass mein shell code-fence (agar koi ho) ka asli id register
