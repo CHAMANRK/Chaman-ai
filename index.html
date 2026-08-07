@@ -3922,6 +3922,32 @@
   // Footer (meta line + Copy button) + action-widget + output-files —
   // shared banata hai taaki addAssistantBubble aur appendAssistantContinuation
   // (dono) isi ek jagah se footer banayein, duplicate logic na ho.
+  // ── Blank-bubble handling ──────────────────────────────────────────
+  // renderAction() action ka UI (ask_user sheet, termux_run codeblock,
+  // quiz card) hamesha msg-footer ke NEECHE, bubble ke BAHAR render karta
+  // hai (buildMsgFooter line ~3953). Jab model sirf ek [ACTION:...] tag
+  // bhejta hai bina kisi lead-in prose ke (jo bohut common hai — jaise
+  // seedha ask_user pooch lena), to bubble ka apna text area 100% khaali
+  // reh jaata tha — user ko lagta blank reply aayi (tokens phir bhi
+  // consume ho chuke hote). Purana fallback (`!action` check) isko
+  // "action hai to theek hai" maan ke skip kar deta tha, lekin visually
+  // wo theek nahi lagta kyunki action ka UI bubble ke andar nahi hota.
+  // Ab har action-type ke liye ek chhota contextual placeholder text
+  // dete hain, aur sirf tab generic "kuch gadbad" error dikhate hain
+  // jab koi action bhi na ho.
+  const ACTION_EMPTY_TEXT = {
+    ask_user: 'Neeche diye gaye options mein se chuno:',
+    termux_run: 'Command taiyaar hai, neeche dekh:',
+    quran_quiz_start: 'Quiz shuru kar raha hoon, neeche dekh:'
+  };
+  function resolveBubbleText(text, action) {
+    if (text && text.trim()) return text;
+    if (action && action.name) {
+      return ACTION_EMPTY_TEXT[action.name] || 'Neeche dekh:';
+    }
+    return 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
+  }
+
   function buildMsgFooter(copyText, meta, wrap, action, outputFiles) {
     const footer = document.createElement('div');
     footer.className = 'msg-footer';
@@ -3970,6 +3996,7 @@
     const oldFooter = wrapEl.querySelector('.msg-footer');
     if (oldFooter) oldFooter.remove();
 
+    text = resolveBubbleText(text, action);
     const chunk = document.createElement('div');
     chunk.className = 'bubble continuation-bubble';
     chunk.innerHTML = renderMarkdown(text, !!animate);
@@ -3983,9 +4010,10 @@
   function addAssistantBubble(text, meta, isError, animate, action, outputFiles) {
     // Backend action-parse fail ho jaaye aur text bhi khaali ho, to poori
     // bubble blank na dikhe (jaisa pehle "Groq · model" + Copy button ke
-    // saath khaali box dikhta tha) — ek chhota fallback line de do.
-    if (!isError && !action && (!text || !text.trim())) {
-      text = 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
+    // saath khaali box dikhta tha) — action-aware placeholder ya generic
+    // fallback line de do (dekh resolveBubbleText).
+    if (!isError) {
+      text = resolveBubbleText(text, action);
     }
     const row = document.createElement('div');
     row.className = 'row assistant';
@@ -4173,16 +4201,12 @@
   // tha (pure action-only turn, ya non-streaming fallback), to purani tarah
   // ek naya bubble instant bana deta hai — na ki fake-typewriter animate.
   function finalizeStreamedOrNew(streamed, text, meta, action, outputFiles) {
-    // addAssistantBubble() mein ye blank-text fallback pehle se tha, lekin
-    // live-streamed path (neeche wala if-branch) isse skip kar deta tha —
-    // isliye jab run_code MAX_CODE_ITERATIONS hit karta aur model ka aakhri
-    // call sirf action-tag (ya thoda leading whitespace) bhejta, cleanText
-    // khaali reh jaata aur ek visually-blank bubble final ban jaata tha
-    // (jabki tokens already consume ho chuke hote the). Ab dono paths se
-    // consistent behaviour milta hai.
-    if (!action && (!text || !text.trim())) {
-      text = 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
-    }
+    // addAssistantBubble() ke fallback ka same logic ab resolveBubbleText()
+    // se milta hai — live-streamed path pehle isse skip kar deta tha, isliye
+    // koi bhi action-only turn (run_code iteration-exhaust ho, ya seedha
+    // ask_user/termux_run ho) blank bubble chhod deta tha jabki tokens
+    // consume ho chuke hote. Ab dono paths consistent hain.
+    text = resolveBubbleText(text, action);
     if (streamed && streamed.bubbleEl) {
       // live=true: ye ab is turn ka authoritative, ek-baar-hi render hai —
       // isi pass mein shell code-fence (agar koi ho) ka asli id register
