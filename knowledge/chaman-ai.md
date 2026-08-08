@@ -57,3 +57,16 @@ Chaman AI Vercel serverless functions pe host hai. LLM providers: Groq
 (openai/gpt-oss-120b), OpenRouter (openai/gpt-oss-20b:free), Cerebras
 (llama-3.3-70b) — teeno free tier. Web search Tavily API se hoti hai
 (1000 searches/month free tier).
+
+## PWA support — manifest + service worker (2026-08-08)
+Chaman AI ab ek installable PWA hai. `manifest.json` (name "Chaman AI",
+`display: standalone`, existing `logo.png` hi icon) aur `sw.js` (service
+worker) add kiye gaye. Service worker cache-first + stale-while-revalidate
+strategy se app-shell (HTML, manifest, logo, fonts, KaTeX) cache karta hai
+— isliye dusri baar app open karte waqt logo/icons dobara load nahi hote,
+turant khulta hai, aur offline pe bhi shell available rehta hai. Chat/API
+calls (`/api/`, `/chat`, `/stream` paths) is caching se explicitly bypass
+kiye gaye hain — wo hamesha fresh network se jaate hain, kabhi stale cache
+se serve nahi hote. Naya shell deploy karte waqt `sw.js` ke andar
+`CACHE_NAME` version bump (v1 → v2) karna zaroori hai, warna purana cached
+shell hi dikhta rehta hai.
