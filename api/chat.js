@@ -636,7 +636,13 @@ const PROVIDERS = [
       callOpenAICompatible({
         url: 'https://api.cerebras.ai/v1/chat/completions',
         key,
-        model: 'llama-3.3-70b',
+        // 'llama-3.3-70b' Cerebras ke catalog se hata diya gaya hai (ab sirf
+        // gpt-oss-120b / gemma-4-31b / zai-glm-4.7 bache hain) — isi wajah se
+        // saari 8 keys pe HTTP 404 "model_not_found" aa raha tha, kisi key ka
+        // koi issue nahi tha. gpt-oss-120b use kar rahe hain kyunki Groq pe
+        // bhi wahi model hai aur system prompt/action-tag format usi ke liye
+        // tuned hai — behavior consistent rahega provider switch hone par.
+        model: 'gpt-oss-120b',
         messages,
         termuxStatus,
         knowledgeNote,
@@ -902,6 +908,21 @@ const SUMMARY_LINE_MAX_CHARS = 160;
 // exceeds this count, the oldest ones are dropped (with a note), keeping the
 // most recent MAX_SUMMARY_MESSAGES older-turns as the recap.
 const MAX_SUMMARY_MESSAGES = 20;
+// KEEP_LAST_MESSAGES sirf COUNT dekhta hai, SIZE nahi — agar recent
+// messages mein bade code-blocks/repeated explanations ho (jaisa hota hai
+// jab model input()-wali galti baar baar explain karta hai), to sirf 5
+// messages hi Groq ke free-tier 8000 TPM/request limit se aasani se bada
+// ho jaate hain, aur poora fallback chain (sab 9 keys) ek hi request pe
+// fail ho jaata hai — ye "over time" rate limit nahi, single request hi
+// budget se bada hota hai. Isliye count ke upar ek rough token-budget cap
+// bhi lagaya hai (char/4 heuristic — koi tokenizer install nahi karna
+// padta). 8000 TPM ka aadha rakha hai taaki system prompt + model ka apna
+// output bhi us budget mein fit ho sake.
+const RECENT_TOKEN_BUDGET = 4000;
+
+function estimateTokens(text) {
+  return Math.ceil((text || '').length / 4);
+}
 
 function messageContentToText(content) {
   if (typeof content === 'string') return content;
@@ -948,11 +969,27 @@ function summarizeOlderMessages(older) {
 // aakhri KEEP_LAST_MESSAGES ko as-is rakhta hai. Chhoti sessions (<= limit)
 // bilkul unchanged rehti hain.
 function trimMessagesWithSummary(messages) {
-  if (!Array.isArray(messages) || messages.length <= KEEP_LAST_MESSAGES) {
-    return messages;
+  if (!Array.isArray(messages) || messages.length <= 1) return messages;
+
+  // Step 1: purana count-based cutoff (last KEEP_LAST_MESSAGES).
+  let cutIndex = Math.max(0, messages.length - KEEP_LAST_MESSAGES);
+
+  // Step 2: ab is window ka estimated size dekho — agar phir bhi budget se
+  // zyada hai (bade code/explanation wale messages ki wajah se), window ko
+  // aur chhota karte jao. Aakhri message hamesha full rakhte hain (warna
+  // current user turn hi kho jaayega).
+  let recentTokens = messages
+    .slice(cutIndex)
+    .reduce((sum, m) => sum + estimateTokens(messageContentToText(m.content)), 0);
+  while (cutIndex < messages.length - 1 && recentTokens > RECENT_TOKEN_BUDGET) {
+    recentTokens -= estimateTokens(messageContentToText(messages[cutIndex].content));
+    cutIndex++;
   }
-  const older = messages.slice(0, messages.length - KEEP_LAST_MESSAGES);
-  const recent = messages.slice(messages.length - KEEP_LAST_MESSAGES);
+
+  if (cutIndex <= 0) return messages;
+
+  const older = messages.slice(0, cutIndex);
+  const recent = messages.slice(cutIndex);
   const summaryText = summarizeOlderMessages(older);
   return [{ role: 'user', content: summaryText }, ...recent];
 }
