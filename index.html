@@ -1,0 +1,4658 @@
+<!DOCTYPE html>
+<!--
+  ★★★ ICON RULE (poori app ke liye) ★★★
+  Is app mein SIRF icons8.com ka "LED" style use hota hai:
+    https://icons8.com/icons/set/led
+  URL pattern: https://img.icons8.com/led/{size}/{icon-name}.png
+  Koi bhi doosra icons8 style (ios7, m_outlined, dotty, material, etc.) YA kisi
+  aur site/icon-pack ka icon is app mein add mat karo — poori app mein ek hi
+  consistent LED look rakhna hai. Naya icon chahiye ho to pehle
+  https://icons8.com/icons/set/led pe search karke exact "LED style" URL
+  confirm karo (icon ke page pe "meta-og:image" / Download button se), phir
+  hi use karo.
+
+  ★ EXCEPTIONS (Najeef confirm kiya hai): "search" aur "python" icons ke liye
+  LED set mein exact match nahi mila, isliye Dotty ("window-search") aur
+  Wired ("python") style temporarily use ho rahe hai. Baaki poori app LED hai.
+-->
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content">
+<title>Chaman AI</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Scheherazade+New:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+  :root{
+    --ink:#12100e;
+    --ink-2:#1a1713;
+    --ink-3:#221e18;
+    --line:#332d24;
+    --paper:#ede7dd;
+    --paper-dim:#a89d8a;
+    --amber:#e8a33d;
+    --amber-dim:#8a6a30;
+    --sage:#7c9473;
+    --sage-dim:#3a4235;
+    --rust:#b24c2f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(ellipse 800px 500px at 15% -10%, rgba(232,163,61,0.07), transparent),
+      radial-gradient(ellipse 600px 400px at 100% 10%, rgba(124,148,115,0.06), transparent);
+    color:var(--paper);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh; /* mobile chrome address-bar ke saath sahi height */
+    overflow:hidden;
+  }
+
+  /* ── header ── */
+  header{
+    flex:0 0 auto;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:linear-gradient(180deg, var(--ink-2), transparent);
+    position:relative;
+    z-index:5;
+  }
+  .icon-btn{
+    all:unset;
+    width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .icon-btn:active{background:var(--ink-3);}
+  .icon-btn img{width:20px;height:20px;display:block;filter:invert(1);opacity:.9;}
+  .burger{display:flex;flex-direction:column;gap:4px;width:18px;}
+  .burger span{display:block;height:2px;width:100%;background:var(--paper);border-radius:1px;}
+
+  .chain{display:flex;gap:6px;align-items:center;}
+  .chain .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--line);
+    transition:background .3s, box-shadow .3s;
+  }
+  .chain .dot.live{
+    background:var(--amber);
+    box-shadow:0 0 8px rgba(232,163,61,0.7);
+  }
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .termux-status-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--rust);
+    box-shadow:0 0 6px rgba(178,76,47,.6);
+    transition:background .3s, box-shadow .3s;
+    cursor:pointer;
+  }
+  .termux-status-dot.connected{
+    background:var(--sage);
+    box-shadow:0 0 8px rgba(124,148,115,.7);
+  }
+  .token-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--paper-dim);
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+  }
+  .token-badge .tb-last{
+    color:var(--amber);
+    transition:opacity .2s;
+  }
+  .token-badge .tb-last:empty{display:none;}
+  .token-badge .tb-sep{color:var(--line);}
+  .bridge-status-line{
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; color:var(--paper-dim);
+    margin:2px 0 14px;
+  }
+  .bridge-status-line .dot{width:8px;height:8px;border-radius:50%;background:var(--line);}
+  .bridge-status-line .dot.ok{background:var(--sage); box-shadow:0 0 6px rgba(124,148,115,.6);}
+  .bridge-status-line .dot.bad{background:var(--rust);}
+  .bridge-field-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    margin:14px 0 6px;
+  }
+  .bridge-token-row{display:flex; gap:6px;}
+  .bridge-token-row input{flex:1; min-width:0;}
+  .bridge-token-row button{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:6px;
+    padding:0 12px;
+    cursor:pointer;
+  }
+
+  /* ── sessions drawer ── */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s;
+    z-index:20;
+  }
+  .overlay.open{opacity:1;pointer-events:auto;}
+
+  .drawer{
+    position:fixed;top:0;left:0;bottom:0;
+    width:78%;max-width:280px;
+    background:var(--ink-2);
+    border-right:1px solid var(--line);
+    transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:21;
+    display:flex;
+    flex-direction:column;
+    padding:18px 14px;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:2px 4px 16px;}
+  .drawer-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:18px;
+    color:var(--amber);
+    letter-spacing:-0.02em;
+  }
+  .new-chat-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    text-align:center;
+    padding:10px;
+    margin-bottom:16px;
+    border:1px solid var(--amber-dim);
+    border-radius:9px;
+    color:var(--amber);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .new-chat-btn img{width:16px;height:16px;display:block;filter:invert(1);opacity:.9;}
+  .new-chat-btn:active{background:rgba(232,163,61,0.08);}
+  .drawer-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:0 4px 8px;
+  }
+  .session-list{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .session-row{
+    display:flex;
+    align-items:center;
+    border-radius:8px;
+    border-left:2px solid transparent;
+  }
+  .session-row.active{
+    background:var(--ink-3);
+    border-left-color:var(--amber);
+  }
+  .session-item{
+    all:unset;
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    min-width:0;
+    padding:11px 10px;
+    border-radius:8px;
+    color:var(--paper-dim);
+    font-size:13.5px;
+    line-height:1.4;
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .session-row:active .session-item{background:var(--ink-3);}
+  .session-row.active .session-item{color:var(--paper);}
+  .session-item.pressing{background:var(--ink-3);}
+  .session-empty{
+    padding:10px;
+    color:var(--paper-dim);
+    font-size:12.5px;
+    font-style:italic;
+  }
+
+  /* ── drawer footer (settings entry point) ── */
+  .drawer-footer{
+    margin-top:auto;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+  }
+  .drawer-footer-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    padding:11px 10px;
+    border-radius:8px;
+    color:var(--paper-dim);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .drawer-footer-btn:active{background:var(--ink-3);}
+  .drawer-footer-btn img{width:18px;height:18px;display:block;flex:0 0 auto;filter:invert(1);opacity:.85;}
+
+  /* ── settings page (poori screen ki alag "page" — abhi sirf Profile,
+     aage aur bahut saare setting groups yahin isi list style mein add honge) ── */
+  .settings-page{
+    position:fixed;inset:0;
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:22;
+  }
+  .settings-page.open{transform:translateX(0);}
+  .settings-header{
+    flex:0 0 auto;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:linear-gradient(180deg, var(--ink-2), transparent);
+  }
+  .settings-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--paper);
+    letter-spacing:-0.01em;
+  }
+  .settings-body{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 14px;
+  }
+  .settings-row{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    padding:13px 12px;
+    border-radius:9px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    cursor:pointer;
+  }
+  .settings-row:active{background:var(--ink-3);}
+  .settings-row-main{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .settings-row-title{font-size:13px;color:var(--paper-dim);}
+  .settings-row-value{
+    font-size:14.5px;
+    color:var(--paper);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .settings-row-arrow{color:var(--paper-dim);font-size:14px;flex:0 0 auto;padding-left:10px;}
+  .settings-row-arrow img{width:16px;height:16px;display:block;filter:invert(1);opacity:.7;}
+
+  /* ── generic app modal (session actions, attach menu, etc.) ── */
+  .app-modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    opacity:0;pointer-events:none;
+    transition:opacity .2s;
+    z-index:40;
+  }
+  .app-modal-overlay.open{opacity:1;pointer-events:auto;}
+  .app-modal{
+    width:100%;
+    max-width:300px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    transform:scale(0.94) translateY(6px);
+    transition:transform .2s;
+    box-shadow:0 12px 32px rgba(0,0,0,0.45);
+  }
+  .app-modal-overlay.open .app-modal{transform:scale(1) translateY(0);}
+  .app-modal-title{
+    font-size:13px;
+    color:var(--paper-dim);
+    padding:2px 4px 12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    border-bottom:1px solid var(--line);
+    margin-bottom:8px;
+  }
+  .app-modal-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    width:100%;
+    padding:12px 10px;
+    border-radius:9px;
+    color:var(--paper);
+    font-size:14.5px;
+    cursor:pointer;
+  }
+  .app-modal-btn:active{background:var(--ink-3);}
+  .app-modal-btn .glyph{width:18px;text-align:center;font-size:15px;color:var(--paper-dim);}
+  .app-modal-btn .glyph img{width:18px;height:18px;display:block;filter:invert(1);opacity:.85;}
+  .app-modal-btn.danger{color:var(--rust);}
+  .app-modal-btn.danger .glyph{color:var(--rust);}
+  .app-modal-btn.danger .glyph img{filter:invert(29%) sepia(54%) saturate(1929%) hue-rotate(340deg) brightness(93%) contrast(94%);opacity:1;}
+  .app-modal-input{
+    all:unset;
+    box-sizing:border-box;
+    display:block;
+    width:100%;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:9px;
+    color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;
+    padding:10px 12px;
+    margin-bottom:14px;
+  }
+  .app-modal-input:focus{outline:none;border-color:var(--amber-dim);}
+  .app-modal-text{
+    font-size:13.5px;
+    color:var(--paper-dim);
+    line-height:1.5;
+    padding:2px 2px 16px;
+  }
+  .app-modal-footer{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+  }
+  .app-modal-footer button{
+    all:unset;
+    box-sizing:border-box;
+    padding:9px 15px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    text-align:center;
+  }
+  .app-modal-footer .sm-cancel{color:var(--paper-dim);border:1px solid var(--line);}
+  .app-modal-footer .sm-cancel:active{background:var(--ink-3);}
+  .app-modal-footer .sm-confirm{color:var(--ink);background:var(--amber);font-weight:600;}
+  .app-modal-footer .sm-confirm:active{transform:scale(0.96);}
+  .app-modal-footer .sm-confirm.danger{background:var(--rust);color:#fff;}
+
+  /* ── chat area ── */
+  main{
+    flex:1 1 auto;
+    min-height:0; /* CRITICAL: without this, flex item won't shrink and pushes the form off-screen */
+    overflow-y:auto;
+    padding:22px 16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    scroll-behavior:smooth;
+  }
+  main::-webkit-scrollbar{width:0;}
+
+  .empty{
+    margin:auto;
+    text-align:center;
+    color:var(--paper-dim);
+    max-width:280px;
+  }
+  .empty .glyph-big{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 auto 10px;
+  }
+  .empty .glyph-big .empty-mark{
+    animation-duration:2.6s; /* idle state mein thoda slower/calmer pulse */
+  }
+  .empty-greet{
+    font-size:19px;
+    font-weight:600;
+    color:var(--paper);
+    margin-bottom:6px;
+  }
+  .empty p{font-size:13px;line-height:1.6;margin:0;}
+
+  .row{display:flex;max-width:100%;}
+  .row.user{justify-content:flex-end;}
+  .row.assistant{justify-content:flex-start;}
+
+  .bubble{
+    max-width:82%;
+    padding:11px 14px;
+    font-size:15px;
+    line-height:1.55;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+  }
+  .row.user .bubble{
+    background:var(--sage-dim);
+    border:1px solid rgba(124,148,115,0.35);
+    color:#dfe8db;
+    border-radius:14px 14px 3px 14px;
+  }
+  .row.assistant .bubble{
+    background:transparent;
+    border-left:2px solid var(--amber-dim);
+    padding-left:13px;
+    color:var(--paper);
+    border-radius:2px;
+    max-width:100%; /* .wrap already caps width at 82% — bubble should fill it fully, not re-shrink */
+  }
+  .row.assistant .wrap .continuation-bubble{margin-top:6px;}
+  .bubble strong{color:var(--amber);font-weight:600;}
+  .bubble em{font-style:italic;color:#f3ead8;}
+  .bubble .inline-code{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.88em;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:1px 5px;
+    color:#f0c988;
+  }
+  .codeblock{
+    margin:8px 0;
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--ink-3);
+    white-space:normal; /* .bubble ka pre-wrap yahan inherit ho ke header/pre/output ke beech ke
+                            raw template-literal newlines+indentation ko visible line-break bana raha
+                            tha — isi se codeblock ke andar bohut zyada spacing dikh rahi thi. */
+  }
+  .codeblock-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 10px;
+    background:var(--ink-2);
+    border-bottom:1px solid var(--line);
+  }
+  .codeblock-head .lang{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    text-transform:lowercase;
+    letter-spacing:0.03em;
+  }
+  .copy-btn{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:5px;
+    padding:3px 9px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .copy-btn:active{transform:scale(0.94);}
+  .copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
+  .codeblock-actions{display:flex;gap:6px;}
+  .run-btn{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--sage);
+    border:1px solid var(--sage-dim);
+    border-radius:5px;
+    padding:3px 9px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .run-btn:active{transform:scale(0.94);}
+  .run-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .run-btn.running{color:var(--rust); border-color:var(--rust);}
+  .run-btn.disabled-hint{opacity:.45; cursor:not-allowed;}
+  .codeblock-output{
+    border-top:1px solid var(--line);
+    background:#0d0b09;
+    padding:8px 12px;
+    max-height:220px;
+    overflow-y:auto;
+    display:none;
+  }
+  .codeblock-output.show{display:block;}
+  .codeblock-output pre{
+    margin:0;
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    line-height:1.5;
+    color:#c9c0ab;
+  }
+  .codeblock-output .exit-line{
+    margin-top:6px;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .codeblock-output .exit-line.ok{color:var(--sage);}
+  .codeblock-output .exit-line.fail{color:var(--rust);}
+  .codeblock-stdin{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    border-top:1px solid var(--line);
+    padding:6px 10px;
+  }
+  .codeblock-stdin.waiting{
+    border-top-color:var(--amber);
+  }
+  .stdin-wait-hint{
+    font-size:11px;
+    color:var(--amber);
+    font-family:'IBM Plex Mono',monospace;
+    display:none;
+  }
+  .stdin-wait-hint.show{
+    display:block;
+  }
+  .stdin-input-row{
+    display:flex;
+    gap:6px;
+  }
+  .stdin-input-row input{
+    flex:1;
+    min-width:0;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px 8px;
+    color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+  }
+  .stdin-input-row button{
+    all:unset;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--amber);
+    padding:6px 10px;
+    cursor:pointer;
+  }
+  .codeblock pre{
+    margin:0;
+    padding:10px 12px;
+    overflow-x:auto;
+  }
+  .codeblock code{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    line-height:1.5;
+    color:#e6ddc9;
+    white-space:pre;
+  }
+  .md-p{margin:0 0 10px;}
+  .md-p:last-child{margin-bottom:0;}
+  .md-h{
+    font-family:'Space Grotesk',sans-serif;
+    color:var(--amber);
+    line-height:1.3;
+    margin:14px 0 8px;
+  }
+  .bubble > .md-h:first-child{margin-top:0;}
+  h1.md-h{font-size:19px;}
+  h2.md-h{font-size:17px;}
+  h3.md-h{font-size:15.5px;}
+  h4.md-h,h5.md-h,h6.md-h{font-size:14.5px;color:var(--paper);}
+  .md-list{
+    margin:0 0 10px;
+    padding-left:20px;
+  }
+  .md-list li{margin-bottom:4px;line-height:1.5;}
+  .md-list:last-child{margin-bottom:0;}
+  .md-table-wrap{
+    overflow-x:auto;
+    margin:8px 0 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  /* ── KaTeX math ── */
+  .md-math-block{
+    overflow-x:auto;
+    overflow-y:hidden;
+    margin:10px 0;
+    padding:10px 12px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .md-math-block .katex-display{margin:0;}
+  .md-math-inline{
+    display:inline-block;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    vertical-align:middle;
+  }
+  .md-math-error{
+    color:var(--rust);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+  }
+  .katex{color:var(--paper);font-size:1.05em;}
+  .katex-display{overflow-x:auto;overflow-y:hidden;}
+  .md-table{
+    border-collapse:collapse;
+    width:100%;
+    font-size:13.5px;
+  }
+  .md-table th,.md-table td{
+    padding:7px 11px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    white-space:nowrap;
+  }
+  .md-table th{
+    background:var(--ink-3);
+    color:var(--amber);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .md-table tr:last-child td{border-bottom:none;}
+  .md-table tr:nth-child(even) td{background:rgba(255,255,255,0.02);}
+  .meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--paper-dim);
+  }
+  .msg-footer{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+    padding-left:13px;
+  }
+  .msg-footer .meta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bridge-inline-actions{
+    margin-top:8px;
+    padding-left:13px;
+  }
+  .bridge-inline-connect-btn{
+    all:unset;
+    box-sizing:border-box;
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    border-radius:8px;
+    padding:8px 14px;
+    cursor:pointer;
+  }
+  .bridge-inline-connect-btn:active{transform:scale(0.96);}
+  .msg-copy-btn{
+    all:unset;
+    box-sizing:border-box;
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--paper-dim);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:3px 8px;
+    cursor:pointer;
+    line-height:1;
+    transition:color .15s, border-color .15s;
+  }
+  .msg-copy-btn:active{transform:scale(0.94);}
+  .msg-copy-btn.copied{color:var(--sage);border-color:var(--sage-dim);}
+  .row.assistant .wrap{display:flex;flex-direction:column;max-width:100%;}
+
+  .thinking{
+    display:flex;align-items:center;padding-left:13px;padding-top:2px;padding-bottom:2px;
+    border-left:2px solid var(--amber-dim);
+  }
+  .thinking-orb{
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;
+  }
+  .thinking-orb .aurora{
+    position:absolute;
+    width:32px;height:32px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg,
+      var(--amber), var(--rust), var(--sage), #3d8ce8, #a33de8, var(--amber));
+    filter:blur(9px) saturate(1.5);
+    opacity:.6;
+    animation:auroraSpin 3.2s linear infinite;
+  }
+  .thinking-orb .rs-mark{
+    position:relative;
+    z-index:1;
+    display:block;
+    animation:rsBreathe 1.5s ease-in-out infinite;
+  }
+  @keyframes auroraSpin{
+    0%{ transform:rotate(0deg) scale(1); }
+    50%{ transform:rotate(180deg) scale(1.15); }
+    100%{ transform:rotate(360deg) scale(1); }
+  }
+  @keyframes rsBreathe{
+    0%,100%{ transform:scale(1); filter:brightness(1) drop-shadow(0 0 2px rgba(232,163,61,.35)); }
+    50%{ transform:scale(1.14); filter:brightness(1.3) drop-shadow(0 0 8px rgba(232,163,61,.8)); }
+  }
+
+  /* ── live web search status ── */
+  .search-status{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding-left:13px;
+    padding-top:2px;padding-bottom:2px;
+    border-left:2px solid var(--amber-dim);
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    transition:border-color .25s, color .25s;
+  }
+  .search-status .glass{
+    display:inline-block;
+    font-size:14px;
+    animation:search-scan 1.1s ease-in-out infinite;
+    transform-origin:70% 70%;
+  }
+  .search-status .glass img{width:16px;height:16px;display:block;}
+  @keyframes search-scan{
+    0%,100%{transform:rotate(-10deg) scale(1);}
+    50%{transform:rotate(10deg) scale(1.18);}
+  }
+  .search-status.found .glass,
+  .search-status.failed .glass{animation:none;}
+  .search-status .status-text .dots::after{
+    content:'';
+    display:inline-block;
+    width:1.2em;
+    text-align:left;
+    animation:search-dots 1.2s steps(4,end) infinite;
+  }
+  @keyframes search-dots{
+    0%{content:'';}
+    25%{content:'.';}
+    50%{content:'..';}
+    75%{content:'...';}
+    100%{content:'';}
+  }
+  .search-status .scan-bar{
+    position:relative;
+    width:46px;height:2px;
+    border-radius:2px;
+    background:var(--line);
+    overflow:hidden;
+    flex:0 0 auto;
+  }
+  .search-status .scan-bar::after{
+    content:'';
+    position:absolute;top:0;left:-40%;
+    width:40%;height:100%;
+    background:var(--amber);
+    border-radius:2px;
+    animation:scan-move 1s ease-in-out infinite;
+  }
+  .search-status.found .scan-bar::after{background:var(--sage);animation:none;left:0;width:100%;}
+  .search-status.failed .scan-bar::after{background:var(--rust);animation:none;left:0;width:100%;}
+  @keyframes scan-move{
+    0%{left:-40%;}
+    100%{left:100%;}
+  }
+  .search-status.found{border-left-color:var(--sage-dim);color:var(--sage);}
+  .search-status.failed{border-left-color:var(--rust);color:var(--rust);}
+
+  .err{color:var(--rust);}
+
+  /* ── typewriter cursor ── */
+  .bubble.typing::after{
+    content:'';
+    display:inline-block;
+    width:2px;
+    height:1em;
+    margin-left:2px;
+    background:var(--amber);
+    vertical-align:text-bottom;
+    animation:blink .8s step-end infinite;
+  }
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ── ask_user action: bottom-sheet card (neeche se slide-up, options
+     vertical list mein line-by-line — pehle wale inline circular pills
+     narrow mobile width pe overlap kar rahe the, isliye poora hata diya) ── */
+  .ask-user-backdrop{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:60;
+    opacity:0;
+    transition:opacity .25s ease;
+  }
+  .ask-user-backdrop.show{opacity:1;}
+  .ask-user-sheet{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:61;
+    background:var(--ink-2);
+    border-top:1px solid var(--line);
+    border-radius:20px 20px 0 0;
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+    max-height:70vh;
+    overflow-y:auto;
+    box-shadow:0 -8px 30px rgba(0,0,0,.4);
+  }
+  .ask-user-sheet.show{transform:translateY(0);}
+  .ask-user-sheet-handle{
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:999px;
+    margin:0 auto 14px;
+  }
+  .ask-user-sheet-q{
+    font-size:15px;
+    font-weight:600;
+    color:var(--paper);
+    margin-bottom:14px;
+  }
+  .ask-user-sheet-opts{
+    display:flex;
+    flex-direction:column;
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .ask-user-sheet-opt{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    width:100%;
+    padding:14px 16px;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--paper);
+    font:inherit;
+    font-size:14.5px;
+    line-height:1.45;
+    text-align:left;
+    cursor:pointer;
+  }
+  .ask-user-sheet-opt:last-child{border-bottom:none;}
+  .ask-user-sheet-opt:active{background:var(--ink-3);}
+  .ask-user-sheet-opt.selected{color:var(--amber); font-weight:600;}
+  .ask-user-sheet-opt .chk{
+    width:18px; height:18px;
+    margin-top:1px; /* pehli line ke text-baseline ke saath visually align karta hai */
+    border-radius:50%;
+    border:1.5px solid var(--paper-dim);
+    flex:0 0 auto;
+  }
+  .ask-user-sheet-opt .chk.sq{border-radius:4px;}
+  .ask-user-sheet-opt.selected .chk{border-color:var(--amber); background:var(--amber);}
+  .ask-user-sheet-opt span:not(.chk){flex:1 1 auto; min-width:0;}
+  .ask-user-sheet-confirm{
+    display:block;
+    width:100%;
+    margin-top:14px;
+    padding:13px;
+    border-radius:12px;
+    border:none;
+    background:var(--amber);
+    color:var(--ink);
+    font:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .ask-user-sheet-confirm:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* Options ke neeche "ya apna jawab likho" wala free-text row — taaki user
+     sirf AI ke diye options tak limited na rahe. */
+  .ask-user-sheet-custom{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+  .ask-user-sheet-custom input{
+    flex:1;
+    min-width:0;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    color:var(--paper);
+    font:inherit;
+    font-size:14px;
+  }
+  .ask-user-sheet-custom button{
+    all:unset;
+    padding:11px 16px;
+    border-radius:10px;
+    background:var(--amber);
+    color:var(--ink);
+    font:inherit;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .ask-user-sheet-custom button:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* Sheet band hone ke baad chat ke andar chhota "jawab" summary reh jaata hai */
+  .ask-user-answered{
+    margin-top:8px;
+    padding-top:10px;
+    border-top:1px dashed var(--amber-dim);
+    font-size:13px;
+    color:var(--amber-dim);
+  }
+  .ask-user-answered b{color:var(--amber);}
+
+  /* ── jump-to-bottom button (jab user upar scroll kare tab dikhta hai) ── */
+  .jump-bottom{
+    position:fixed;
+    right:16px;
+    bottom:calc(78px + env(safe-area-inset-bottom));
+    width:38px;height:38px;
+    border-radius:50%;
+    border:1px solid var(--amber-dim);
+    background:var(--ink-2);
+    color:var(--amber);
+    font-size:16px;
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    opacity:0;
+    transform:translateY(8px);
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+    z-index:6;
+  }
+  .jump-bottom.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .jump-bottom:active{transform:scale(0.92);}
+  .jump-bottom img{width:18px;height:18px;display:block;filter:invert(1);opacity:.9;}
+
+  /* ── input bar ── */
+  form{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+    background:var(--ink-2);
+    border-top:1px solid var(--line);
+  }
+  .input-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .attach-btn{
+    all:unset;
+    box-sizing:border-box;
+    flex:0 0 auto;
+    width:44px;height:44px;
+    border-radius:11px;
+    border:1.5px solid var(--amber-dim);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .attach-btn:active{background:rgba(232,163,61,0.12);transform:scale(0.94);}
+  .attach-btn{color:var(--amber);}
+  .attach-btn img{width:22px;height:22px;display:block;filter:invert(1);opacity:.9;}
+
+  /* ── attached-file chips (input ke upar dikhte hain, send se pehle) ── */
+  .attach-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .attach-chips.has-files{margin-bottom:9px;}
+  .attach-chip{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    max-width:170px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:5px 6px 5px 10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--paper-dim);
+  }
+  .attach-chip.reading,
+  .attach-chip.analyzing{border-color:var(--amber-dim);}
+  .attach-chip.reading .chip-name,
+  .attach-chip.analyzing .chip-name{animation:chipPulse 1.1s ease-in-out infinite;}
+  @keyframes chipPulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+  .attach-chip.unsupported{border-color:var(--rust);}
+  .attach-chip.analyzed{border-color:var(--sage,#5a9c6e);}
+  .attach-chip .chip-name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--paper);
+  }
+  .attach-chip .chip-remove{
+    all:unset;
+    box-sizing:border-box;
+    position:relative;
+    flex:0 0 auto;
+    width:18px;height:18px;
+    cursor:pointer;
+  }
+  .attach-chip .chip-remove::before,
+  .attach-chip .chip-remove::after{
+    content:'';
+    position:absolute;
+    left:3px;right:3px;
+    top:8px;
+    height:1.5px;
+    background:var(--paper-dim);
+    border-radius:1px;
+  }
+  .attach-chip .chip-remove::before{transform:rotate(45deg);}
+  .attach-chip .chip-remove::after{transform:rotate(-45deg);}
+  .attach-chip .chip-remove:active::before,
+  .attach-chip .chip-remove:active::after{background:var(--rust);}
+
+  /* ── output files produced by the Python sandbox — Claude-style file cards ── */
+  .output-files{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-top:10px;
+    max-width:340px;
+  }
+  .output-file-card{
+    all:unset;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    padding:10px 12px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:14px;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .output-file-card:active{background:var(--ink-2); border-color:var(--amber-dim);}
+  .output-file-icon{
+    flex:0 0 auto;
+    width:38px; height:38px;
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .output-file-icon svg{width:19px; height:19px;}
+  .output-file-icon.code{background:rgba(232,163,61,.15); color:var(--amber);}
+  .output-file-icon.data{background:rgba(124,148,115,.18); color:var(--sage);}
+  .output-file-icon.doc{background:rgba(178,76,47,.15); color:var(--rust);}
+  .output-file-icon.other{background:rgba(168,157,138,.16); color:var(--paper-dim);}
+  .output-file-meta{
+    flex:1 1 auto;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .output-file-name{
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--paper);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .output-file-sub{
+    font-size:11px;
+    color:var(--paper-dim);
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.02em;
+  }
+  .output-file-download{
+    flex:0 0 auto;
+    width:30px; height:30px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--amber);
+  }
+  .output-file-download svg{width:16px; height:16px;}
+  .output-file-card:active .output-file-download{background:var(--amber); color:var(--ink);}
+  .output-file-badge{
+    flex:0 0 auto;
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:3px 7px;
+    border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .output-file-badge.modified{background:rgba(232,163,61,.15); color:var(--amber);}
+  .output-file-badge.new{background:rgba(124,148,115,.18); color:var(--sage);}
+
+  /* ── Quran Quiz card — [ACTION:quran_quiz_start] ── */
+  .quiz-card{
+    margin-top:10px;
+    max-width:340px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+  .quiz-card-eyebrow{
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--amber);
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .quiz-card-loading{
+    font-size:13px;
+    color:var(--paper-dim);
+    padding:10px 0;
+  }
+  .quiz-ayat{
+    font-family:'Scheherazade New', serif;
+    font-size:23px;
+    direction:rtl;
+    text-align:center;
+    line-height:2;
+    color:var(--paper);
+    padding:12px 4px;
+    border-bottom:1px dashed var(--line);
+    margin-bottom:12px;
+  }
+  .quiz-inputs-row{display:flex; gap:10px; margin-bottom:10px;}
+  .quiz-field{flex:1;}
+  .quiz-field label{
+    display:block;
+    font-size:11.5px;
+    color:var(--paper-dim);
+    margin-bottom:4px;
+  }
+  .quiz-field input{
+    width:100%;
+    padding:9px 10px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--ink-2);
+    color:var(--paper);
+    font-size:14px;
+    font-family:inherit;
+  }
+  .quiz-field input:focus{outline:none; border-color:var(--amber);}
+  .quiz-submit-btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:var(--amber);
+    color:var(--ink);
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .quiz-submit-btn:active{transform:scale(.98);}
+  .quiz-submit-btn:disabled{opacity:.5; cursor:default;}
+  .quiz-feedback{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .quiz-feedback.correct{background:rgba(124,148,115,.15); border:1px solid var(--sage); color:#c7dcc0;}
+  .quiz-feedback.wrong{background:rgba(178,76,47,.15); border:1px solid var(--rust); color:#f0c3b8;}
+  .quiz-error{font-size:12.5px; color:var(--rust); margin-top:6px;}
+
+  /* ── attached-file tags shown inside a sent user bubble ── */
+  .msg-files{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:7px;
+  }
+  .msg-file-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:7px;
+    padding:4px 9px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#dfe8db;
+  }
+
+  textarea{
+    flex:1;
+    resize:none;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    max-height:110px;
+    line-height:1.4;
+  }
+  textarea:focus{outline:none;border-color:var(--amber-dim);}
+  textarea::placeholder{color:var(--paper-dim);}
+
+  button{
+    flex:0 0 auto;
+    width:42px;height:42px;
+    border-radius:10px;
+    border:1px solid var(--amber-dim);
+    background:var(--amber);
+    color:var(--ink);
+    font-size:17px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button:active:not(:disabled){transform:scale(0.94);}
+  #send img{width:20px;height:20px;display:block;}
+  .inline-icon{width:14px;height:14px;vertical-align:-2px;display:inline-block;margin-right:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <button id="menuBtn" class="icon-btn" aria-label="Menu" type="button">
+    <img src="https://img.icons8.com/led/32/activity-feed.png" alt="Menu">
+  </button>
+  <div class="token-badge" id="tokenBadge" title="Is session ka total token usage">
+    <span class="tb-last" id="tokenBadgeLast"></span><span class="tb-sep" id="tokenBadgeSep"></span><span id="tokenBadgeTotal">0 tokens</span>
+  </div>
+  <div class="header-right">
+    <div class="termux-status-dot" id="termuxStatusDot" title="Termux Bridge: Disconnected" onclick="window.__openBridgeSettingsFromDot && window.__openBridgeSettingsFromDot()"></div>
+    <div class="chain" id="chain">
+      <div class="dot" data-provider="Groq"></div>
+      <div class="dot" data-provider="OpenRouter"></div>
+      <div class="dot" data-provider="Cerebras"></div>
+      <div class="dot" data-provider="Mistral"></div>
+    </div>
+  </div>
+</header>
+
+<div id="overlay" class="overlay"></div>
+
+<aside id="drawer" class="drawer">
+  <div class="drawer-head">
+    <span class="drawer-title">Chaman AI</span>
+  </div>
+  <button id="newChatBtn" class="new-chat-btn" type="button">
+    <img src="https://img.icons8.com/led/32/filled-plus-2-math.png" alt="">
+    <span>Naya chat</span>
+  </button>
+  <div class="drawer-label">Sessions</div>
+  <div id="sessionList" class="session-list"></div>
+  <div class="drawer-footer">
+    <button id="settingsBtn" class="drawer-footer-btn" type="button">
+      <img src="https://img.icons8.com/led/32/automatic.png" alt="">
+      <span>Settings</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ── Settings page — alag full "page" jaisa dikhta hai. Abhi sirf Profile
+     hai; aage jitne bhi naye settings groups aayenge, sab .settings-body
+     ke andar isi list style mein add honge. ── -->
+<div id="settingsPage" class="settings-page">
+  <div class="settings-header">
+    <button id="settingsBackBtn" class="icon-btn" aria-label="Wapas jao" type="button">
+      <img src="https://img.icons8.com/led/32/circled-chevron-left.png" alt="">
+    </button>
+    <span class="settings-title">Settings</span>
+  </div>
+  <div class="settings-body">
+    <div class="drawer-label">Profile</div>
+    <button type="button" id="profileRow" class="settings-row">
+      <div class="settings-row-main">
+        <span class="settings-row-title">Naam</span>
+        <span class="settings-row-value" id="profileNameDisplay">—</span>
+      </div>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span>
+    </button>
+
+    <div class="drawer-label" style="margin-top:18px;">Termux Bridge</div>
+    <button type="button" id="bridgeRow" class="settings-row">
+      <div class="settings-row-main">
+        <span class="settings-row-title">Status</span>
+        <span class="settings-row-value" id="bridgeStatusDisplay">Disconnected</span>
+      </div>
+      <span class="settings-row-arrow"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span>
+    </button>
+    <!-- Aage aur settings groups (jaise Appearance, Notifications, Data,
+         About, etc.) yahin isi neeche add honge -->
+  </div>
+</div>
+
+<div id="bridgeModalOverlay" class="app-modal-overlay">
+  <div id="bridgeModal" class="app-modal"></div>
+</div>
+
+<div id="profileModalOverlay" class="app-modal-overlay">
+  <div id="profileModal" class="app-modal"></div>
+</div>
+
+<!-- ── Onboarding: pehli baar (naya user / naya localStorage) URL se site
+     khulte hi ye zabardasti dikhta hai jab tak naam save na ho jaaye —
+     isliye ismein "outside click se band ho jaaye" wala behavior jaan-boojh
+     kar nahi diya (dusre app-modal-overlay ki tarah makeModal se nahi
+     banaya), aur koi Cancel button bhi nahi hai. ── -->
+<div id="onboardOverlay" class="app-modal-overlay">
+  <div class="app-modal" id="onboardModal">
+    <div class="app-modal-title">Chaman AI mein swagat hai 👋</div>
+    <div class="app-modal-text">Shuru karne se pehle, tera naam kya hai?</div>
+    <input type="text" id="onboardNameInput" class="app-modal-input" placeholder="Apna naam likho" maxlength="40" autocomplete="off">
+    <div class="app-modal-footer">
+      <button type="button" class="sm-confirm" id="onboardSaveBtn">Shuru karein</button>
+    </div>
+  </div>
+</div>
+
+<div id="sessionModalOverlay" class="app-modal-overlay">
+  <div id="sessionModal" class="app-modal"></div>
+</div>
+
+<div id="attachModalOverlay" class="app-modal-overlay">
+  <div id="attachModal" class="app-modal"></div>
+</div>
+
+<main id="main">
+  <div class="empty" id="empty"></div>
+</main>
+
+<button id="jumpBtn" class="jump-bottom" type="button" aria-label="Neeche jao">
+  <img src="https://img.icons8.com/led/32/circled-chevron-down.png" alt="">
+</button>
+
+<form id="form">
+  <div id="attachChips" class="attach-chips"></div>
+  <div class="input-row">
+    <button id="attachBtn" class="attach-btn" type="button" aria-label="File attach karo">
+        <img src="https://img.icons8.com/led/32/filled-plus-2-math.png" alt="">
+    </button>
+    <input id="fileInput" type="file" multiple accept="*/*" style="display:none">
+    <textarea id="input" rows="1" placeholder="Type kar..." autocomplete="off"></textarea>
+    <button id="send" type="submit">
+      <img src="https://img.icons8.com/led/32/sent.png" alt="Send" width="20" height="20">
+    </button>
+  </div>
+</form>
+
+<script>
+  const $main = document.getElementById('main');
+  const $form = document.getElementById('form');
+  const $input = document.getElementById('input');
+  const $send = document.getElementById('send');
+  const DEFAULT_INPUT_PLACEHOLDER = $input.placeholder;
+  const $dots = document.querySelectorAll('.chain .dot');
+  const $tokenBadgeLast = document.getElementById('tokenBadgeLast');
+  const $tokenBadgeSep = document.getElementById('tokenBadgeSep');
+  const $tokenBadgeTotal = document.getElementById('tokenBadgeTotal');
+  const $menuBtn = document.getElementById('menuBtn');
+  const $overlay = document.getElementById('overlay');
+  const $drawer = document.getElementById('drawer');
+  const $newChatBtn = document.getElementById('newChatBtn');
+  const $sessionList = document.getElementById('sessionList');
+  const $jumpBtn = document.getElementById('jumpBtn');
+  const $sessionModalOverlay = document.getElementById('sessionModalOverlay');
+  const $sessionModal = document.getElementById('sessionModal');
+  const $attachModalOverlay = document.getElementById('attachModalOverlay');
+  const $attachModal = document.getElementById('attachModal');
+  const $attachBtn = document.getElementById('attachBtn');
+  const $fileInput = document.getElementById('fileInput');
+  const $attachChips = document.getElementById('attachChips');
+  const $settingsBtn = document.getElementById('settingsBtn');
+  const $settingsPage = document.getElementById('settingsPage');
+  const $settingsBackBtn = document.getElementById('settingsBackBtn');
+  const $profileRow = document.getElementById('profileRow');
+  const $profileNameDisplay = document.getElementById('profileNameDisplay');
+  const $profileModalOverlay = document.getElementById('profileModalOverlay');
+  const $profileModal = document.getElementById('profileModal');
+  const $bridgeRow = document.getElementById('bridgeRow');
+  const $bridgeStatusDisplay = document.getElementById('bridgeStatusDisplay');
+  const $bridgeModalOverlay = document.getElementById('bridgeModalOverlay');
+  const $bridgeModal = document.getElementById('bridgeModal');
+  const $onboardOverlay = document.getElementById('onboardOverlay');
+  const $onboardNameInput = document.getElementById('onboardNameInput');
+  const $onboardSaveBtn = document.getElementById('onboardSaveBtn');
+
+  let history = []; // {role, content, provider?, model?} — current session ki poori raw chat
+  let busy = false;
+
+  // ── Termux/shell "ek waqt mein ek hi command" lock ───────────────────
+  // Jab bhi AI ke live (naye) response mein koi shell codeblock (```bash
+  // fenced ho ya [ACTION:termux_run] se aaya ho) render hota hai jo abhi
+  // tak Run nahi hua, uska id yahan add ho jaata hai aur input/send locked
+  // ho jaata hai. Run poora hone (exit ya error) pe id nikal jaata hai —
+  // khaali hote hi wapas unlock. Session history reload (animate=false)
+  // ke waqt ye track nahi hota, warna purane un-run blocks hamesha ke liye
+  // input lock kar dete.
+  let pendingRunIds = new Set();
+
+  function setRunLock(locked) {
+    $input.disabled = locked;
+    $send.disabled = locked;
+    $input.placeholder = locked ? 'Pehle upar wali command "▶ Run" karo…' : DEFAULT_INPUT_PLACEHOLDER;
+  }
+
+  function markPendingRun(id) {
+    pendingRunIds.add(id);
+    setRunLock(true);
+  }
+
+  function clearPendingRun(id) {
+    pendingRunIds.delete(id);
+    setRunLock(pendingRunIds.size > 0);
+  }
+  let currentAbortController = null; // jo bhi /api/chat request abhi in-flight hai, uska controller — Stop button isi ko abort karta hai
+  let activeSessionId = null; // null = abhi tak koi reply nahi aaya, session bana hi nahi
+
+  // ── Token usage counter ─────────────────────────────────────────────
+  // Har assistant history-entry apna khud ka token cost store karta hai
+  // ({tokens: {prompt,completion,total}}) — isliye session switch/reload
+  // pe total hamesha history se hi recompute hota hai (localStorage mein
+  // alag se koi running-total store/sync nahi karna padta, single source
+  // of truth hamesha history hi rehta hai).
+  let sessionTokenTotal = 0;
+
+  function formatTokenCount(n) {
+    if (n == null || Number.isNaN(n)) return '?';
+    if (n >= 100000) return Math.round(n / 1000) + 'k';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  // history se poore session ka total (sab assistant messages ke tokens.total ka sum) nikalta hai.
+  function computeSessionTokenTotal(msgs) {
+    return (msgs || []).reduce((sum, m) => {
+      if (m.role === 'assistant' && m.tokens && typeof m.tokens.total === 'number') {
+        return sum + m.tokens.total;
+      }
+      return sum;
+    }, 0);
+  }
+
+  // lastTurnTokens = abhi-abhi aaye reply ka cost (badge mein "+X" flash
+  // dikhane ke liye) — undefined/omit karo to sirf total refresh hoga.
+  function updateTokenBadge(lastTurnTokens) {
+    $tokenBadgeTotal.textContent = formatTokenCount(sessionTokenTotal) + ' tokens';
+    if (lastTurnTokens != null) {
+      $tokenBadgeLast.textContent = '+' + formatTokenCount(lastTurnTokens);
+      $tokenBadgeSep.textContent = '·';
+    } else {
+      $tokenBadgeLast.textContent = '';
+      $tokenBadgeSep.textContent = '';
+    }
+  }
+
+  // Send button ab busy state mein kabhi disable nahi hota — uski jagah wahi
+  // button "Stop" ban jaata hai (icon badal jaata hai, clickable rehta hai).
+  const SEND_ICON = 'https://img.icons8.com/led/32/sent.png';
+  const STOP_ICON = 'https://img.icons8.com/led/32/stop-squared.png';
+  function setSendButtonBusy(isBusy) {
+    $send.disabled = false;
+    $send.innerHTML = isBusy
+      ? `<img src="${STOP_ICON}" alt="Rok do" width="20" height="20">`
+      : `<img src="${SEND_ICON}" alt="Send" width="20" height="20">`;
+    $send.setAttribute('aria-label', isBusy ? 'Rok do' : 'Bhejo');
+  }
+
+  // Abhi jo bhi request chal rahi hai use abort kar do — fetchExchange isi
+  // controller ko sun raha hota hai, abort hote hi AbortError throw hoga.
+  function stopGeneration() {
+    if (currentAbortController) currentAbortController.abort();
+  }
+
+  // "Stick to bottom" — jab tak user khud upar scroll na kare, naya content
+  // aane par hum neeche pin karte rehte hain. Jaise hi user upar scroll karta
+  // hai, hum peeche hat jaate hain aur usse manually padhne dete hain — chahe
+  // AI abhi bhi lamba jawab generate kar raha ho. Jump button se wapas neeche ja sakta hai.
+  let stickToBottom = true;
+  // Jab tak user ki ungli/pointer screen par hai (touch ho ya drag), hum
+  // scrollTop ko kabhi force se set nahi karte — chahe kitni bhi baar
+  // scrollBottom() call ho (jaise typewriter ke har character pe). Pehle
+  // sirf touchmove ke baad stickToBottom false hoti thi, lekin agar typing
+  // ke time JS thoda busy ho (bahut saare textContent updates), to touchmove
+  // handler late fire hota tha aur beech mein forced scrollTop assignments
+  // gesture ko "cancel" kar dete the — isse upar scroll karna bahut mushkil
+  // lagta tha. Ab touchstart hote hi (movement se pehle hi) forced-scroll
+  // turant band ho jaata hai.
+  let touching = false;
+
+  const SESSIONS_KEY = 'chamanai_sessions_v1';
+  const PROFILE_KEY = 'chamanai_profile_v1'; // { name: "..." } — aage isi object mein aur fields (jaise avatar, preferences) add ho sakte hain
+
+  function loadProfile() {
+    try {
+      return JSON.parse(localStorage.getItem(PROFILE_KEY)) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveProfile(profile) {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch (e) {
+      console.warn('Profile save fail:', e);
+    }
+  }
+
+  // ── Termux Bridge: local device connection (loopback-only, token-gated) ──
+  // Config sirf { port, token } hai — token wahi hai jo user ke Termux mein
+  // `npm start` chalane par ek baar print hota hai, aur yahan paste kiya jaata hai.
+  const BRIDGE_KEY = 'chamanai_bridge_v1';
+  function loadBridgeConfig() {
+    try { return JSON.parse(localStorage.getItem(BRIDGE_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveBridgeConfig(cfg) {
+    try { localStorage.setItem(BRIDGE_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+  }
+
+  function bridgeStatusLabel(status) {
+    if (status === 'connected') return 'Connected';
+    if (status === 'connecting') return 'Connecting…';
+    if (status === 'denied') return 'Permission ya token issue';
+    return 'Disconnected';
+  }
+
+  // Ek hi global Bridge — kyunki server-side bhi ek time pe sirf ek hi command
+  // chalata hai, isliye "kis codeblock ki run chal rahi hai" bhi yahin _current
+  // handler ki tarah track hota hai.
+  const Bridge = {
+    ws: null,
+    status: 'disconnected', // disconnected | connecting | connected | denied
+    tools: {},
+    listeners: new Set(),
+    _current: null,
+
+    notify() { this.listeners.forEach((fn) => { try { fn(this.status); } catch (e) {} }); },
+
+    async ensureConnected() {
+      if (this.status === 'connected' && this.ws && this.ws.readyState === WebSocket.OPEN) return true;
+      if (this.status === 'connecting') {
+        return new Promise((resolve) => {
+          const check = () => {
+            if (this.status === 'connected') resolve(true);
+            else if (this.status === 'connecting') setTimeout(check, 200);
+            else resolve(false);
+          };
+          check();
+        });
+      }
+      return this.connect();
+    },
+
+    async connect() {
+      const cfg = loadBridgeConfig();
+      const port = cfg.port || 8787;
+      const token = cfg.token || '';
+      if (!token) { this.status = 'disconnected'; this.notify(); return false; }
+
+      this.status = 'connecting';
+      this.notify();
+
+      // Pehle ek normal fetch — isi se Chrome/Firefox ka Local Network Access
+      // permission popup trigger hota hai (WebSocket errors se generic/vague
+      // failure milta hai, fetch se cleaner signal milta hai ki permission
+      // allow hui ya nahi).
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/health?token=${encodeURIComponent(token)}`);
+        if (!res.ok) throw new Error('auth_failed');
+        const data = await res.json();
+        this.tools = data.tools || {};
+      } catch (err) {
+        this.status = 'denied';
+        this.notify();
+        return false;
+      }
+
+      return new Promise((resolve) => {
+        let settled = false;
+        let ws;
+        try {
+          ws = new WebSocket(`ws://127.0.0.1:${port}/bridge?token=${encodeURIComponent(token)}`);
+        } catch (e) {
+          this.status = 'denied'; this.notify();
+          resolve(false);
+          return;
+        }
+        ws.addEventListener('message', (e) => {
+          let msg;
+          try { msg = JSON.parse(e.data); } catch (err) { return; }
+          if (msg.type === 'ready') {
+            this.tools = msg.tools || {};
+            this.status = 'connected';
+            this.notify();
+            if (!settled) { settled = true; resolve(true); }
+          }
+          this.dispatch(msg);
+        });
+        ws.addEventListener('close', () => {
+          this.status = 'disconnected';
+          this.notify();
+          if (!settled) { settled = true; resolve(false); }
+        });
+        ws.addEventListener('error', () => {
+          this.status = 'denied';
+          this.notify();
+          if (!settled) { settled = true; resolve(false); }
+        });
+        this.ws = ws;
+      });
+    },
+
+    disconnect() {
+      if (this.ws) { try { this.ws.close(); } catch (e) {} }
+      this.ws = null;
+      this.status = 'disconnected';
+      this.notify();
+    },
+
+    dispatch(msg) {
+      // ★ 'reattach' — server ne bataya ki koi command background mein pehle
+      // se chal rahi thi (ya abhi khatam hui) jab hum disconnect the. Agar
+      // isi tab mein pehle se ek runner card (`_current`) attached hai
+      // (jaise phone thodi der lock hua tha aur WS drop hua, lekin tab
+      // band nahi hua), to buffered events usi card mein replay kar do —
+      // bilkul aisa jaise kuch miss hi nahi hua. Agar `_current` hi nahi hai
+      // (poora app reopen hua), to ek chhota system-message dikha do taaki
+      // user ko pata chale ki background mein kuch chal/khatam hua tha.
+      if (msg.type === 'reattach') {
+        if (this._current && Array.isArray(msg.buffer)) {
+          for (const buffered of msg.buffer) this.dispatch(buffered);
+        } else if (Array.isArray(msg.buffer) && msg.buffer.length) {
+          const tail = msg.buffer
+            .filter((e) => e.type === 'output')
+            .map((e) => e.data)
+            .join('')
+            .slice(-1500);
+          const exitEvt = msg.buffer.find((e) => e.type === 'exit');
+          const statusLine = msg.running
+            ? '⚙ Termux Bridge: ek command abhi bhi background mein chal rahi thi jab tu disconnect tha — reconnect ho gaya, ye ab tak ka output hai:'
+            : `⚙ Termux Bridge: background mein chal rahi command tab tak khatam ho chuki thi (exit code ${exitEvt ? exitEvt.code : '?'}) — ye uska aakhri output hai:`;
+          addAssistantBubble(`${statusLine}\n\n\`\`\`\n${tail || '(koi output record nahi mila)'}\n\`\`\``, null, false, false);
+        }
+        return;
+      }
+      const runner = this._current;
+      if (!runner) return;
+      if (msg.type === 'output') runner.onOutput(msg.stream, msg.data);
+      else if (msg.type === 'exit') runner.onExit(msg.code);
+      else if (msg.type === 'error') runner.onError(msg.message);
+      else if (msg.type === 'waiting_input' && runner.onWaitingInput) runner.onWaitingInput(!!msg.waiting);
+    },
+
+    async run(command, handlers) {
+      this._current = handlers;
+      const ok = await this.ensureConnected();
+      if (!ok) {
+        handlers.onError('Bridge se connect nahi ho saka — Settings → Termux Bridge check karo (Termux mein server chal raha hai? Token sahi paste hua? Browser ka "local network" permission allow kiya?).');
+        return;
+      }
+      this.ws.send(JSON.stringify({ type: 'start', command }));
+    },
+
+    sendStdin(data) {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'stdin', data }));
+      }
+    },
+
+    kill() {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'kill' }));
+      }
+    },
+  };
+
+  // Termux run ka poora result agla "user" turn ban ke wapas model ko jaata hai —
+  // web_search/run_code jaisa hi pattern, isliye AI ko poora context milta hai.
+  function formatTermuxResultForModel(command, output, exitCode) {
+    const trimmed = (output || '').trim();
+    return `[Termux command run hui:]\n$ ${command}\n\n[Output:]\n${trimmed || '(koi output nahi tha)'}\n\n[Exit code: ${exitCode}]\n\n[Iske base pe user ko seedha, natural Hinglish jawab de. Agar ye ek multi-step kaam ka hissa tha aur agla command bhi chalana hai, to sirf AGLA EK command de aur wahin ruk ja — usse aage ke steps mat likh, jab tak uska bhi result wapas na aaye.]`;
+  }
+
+  function loadSessions() {
+    try {
+      return JSON.parse(localStorage.getItem(SESSIONS_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function isQuotaError(e) {
+    return !!e && (
+      e.name === 'QuotaExceededError' ||
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      e.code === 22 ||
+      e.code === 1014
+    );
+  }
+
+  // Sabse purana session hata deta hai — current active session ko (agar possible ho)
+  // bacha ke rakhta hai, kyunki wahi abhi save ho raha hota hai.
+  function dropOldestSession(sessions) {
+    if (sessions.length <= 1) return sessions.slice(0, 0); // ek hi bacha tha, use bhi hata do
+    const sorted = [...sessions].sort((a, b) => a.updatedAt - b.updatedAt);
+    const victim = sorted.find(s => s.id !== activeSessionId) || sorted[0];
+    return sessions.filter(s => s.id !== victim.id);
+  }
+
+  // Storage full hone par purani sessions ko aahiste-aahiste (ek-ek karke) hata ke
+  // retry karta hai, jab tak naya data fit na ho jaaye ya sessions khatam na ho jaayein.
+  function saveSessions(sessions) {
+    let list = sessions;
+    while (true) {
+      try {
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(list));
+        return;
+      } catch (e) {
+        if (!isQuotaError(e) || list.length === 0) {
+          console.warn('localStorage save fail:', e);
+          return;
+        }
+        list = dropOldestSession(list);
+      }
+    }
+  }
+
+  function sessionTitle(firstUserMsg) {
+    const t = firstUserMsg.trim().replace(/\s+/g, ' ');
+    return t.length > 42 ? t.slice(0, 42) + '…' : t;
+  }
+
+  // Session sirf tab banta hai jab pehla reply successfully aa jaaye — usse pehle
+  // koi entry sidebar mein nahi dikhti, jaisa maanga gaya tha.
+  function persistTurn() {
+    const sessions = loadSessions();
+    if (activeSessionId) {
+      const s = sessions.find(s => s.id === activeSessionId);
+      if (s) {
+        s.messages = history;
+        s.updatedAt = Date.now();
+      }
+    } else {
+      const firstUser = history.find(m => m.role === 'user');
+      const firstUserMsg = (firstUser && (firstUser.displayText || (firstUser.files && firstUser.files.length ? `File: ${firstUser.files[0].name}` : firstUser.content))) || 'New chat';
+      activeSessionId = String(Date.now());
+      sessions.unshift({
+        id: activeSessionId,
+        title: sessionTitle(firstUserMsg),
+        messages: history,
+        updatedAt: Date.now(),
+      });
+    }
+    saveSessions(sessions);
+    renderSessionList();
+  }
+
+  function renderSessionList() {
+    const sessions = loadSessions().sort((a, b) => b.updatedAt - a.updatedAt);
+    $sessionList.innerHTML = '';
+    if (!sessions.length) {
+      $sessionList.innerHTML = '<div class="session-empty">Abhi koi session nahi — pehla message bhejo.</div>';
+      return;
+    }
+    for (const s of sessions) {
+      const row = document.createElement('div');
+      row.className = 'session-row' + (s.id === activeSessionId ? ' active' : '');
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'session-item';
+      btn.textContent = s.title;
+      attachLongPress(btn, s.id);
+      row.appendChild(btn);
+
+      $sessionList.appendChild(row);
+    }
+  }
+
+  // ── Long-press (300ms) session actions ─────────────────────────────
+  // Ek chhota hold (~300ms) modal khol deta hai jisme Rename/Delete hote
+  // hain — koi icon session row mein hamesha nahi dikhta. Halka sa drag/scroll
+  // ho jaaye to press cancel ho jaata hai (taaki list scroll karna na tootey),
+  // aur ek normal quick tap session ko open karta hai jaisa pehle hota tha.
+  const LONG_PRESS_MS = 300;
+  const LONG_PRESS_MOVE_TOLERANCE = 8;
+
+  function attachLongPress(el, sessionId) {
+    let timer = null;
+    let startX = 0, startY = 0;
+    let fired = false;
+
+    function clear() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      el.classList.remove('pressing');
+    }
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      fired = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      timer = setTimeout(() => {
+        fired = true;
+        el.classList.remove('pressing');
+        if (navigator.vibrate) navigator.vibrate(12);
+        openSessionMenu(sessionId);
+      }, LONG_PRESS_MS);
+      el.classList.add('pressing');
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!timer) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) clear();
+    });
+
+    el.addEventListener('pointerup', clear);
+    el.addEventListener('pointercancel', clear);
+    el.addEventListener('pointerleave', clear);
+
+    el.addEventListener('click', (e) => {
+      if (fired) {
+        // Long-press ne modal khol diya tha — isse ek normal click ki tarah
+        // treat mat karo (session open nahi karna).
+        e.preventDefault();
+        e.stopPropagation();
+        fired = false;
+        return;
+      }
+      openSession(sessionId);
+    });
+  }
+
+  // ── Generic app modal factory ───────────────────────────────────────
+  // Ek hi reusable modal system — session-actions aur attach-menu dono
+  // isi se banate hain. Naya modal chahiye ho to bas makeModal(overlay, card)
+  // se ek instance bana lo, aur .open(builder) / .close() use karo.
+  function makeModal(overlayEl, cardEl) {
+    function close() { overlayEl.classList.remove('open'); }
+    overlayEl.addEventListener('click', (e) => {
+      if (e.target === overlayEl) close();
+    });
+    return {
+      open(contentBuilder) {
+        cardEl.innerHTML = '';
+        contentBuilder(cardEl);
+        overlayEl.classList.add('open');
+      },
+      close,
+    };
+  }
+  const sessionModal = makeModal($sessionModalOverlay, $sessionModal);
+  const attachModal = makeModal($attachModalOverlay, $attachModal);
+  const profileModal = makeModal($profileModalOverlay, $profileModal);
+  const bridgeModal = makeModal($bridgeModalOverlay, $bridgeModal);
+
+  // ── Settings page ───────────────────────────────────────────────────
+  function updateProfileDisplay() {
+    const profile = loadProfile();
+    $profileNameDisplay.textContent = (profile && profile.name) ? profile.name : 'Naam set nahi hai';
+  }
+
+  function updateBridgeStatusDisplay() {
+    $bridgeStatusDisplay.textContent = bridgeStatusLabel(Bridge.status);
+  }
+  Bridge.listeners.add(updateBridgeStatusDisplay);
+
+  // ── Header Termux status dot ────────────────────────────────────────
+  // Har waqt visible chhota indicator (chat page ke top-right, provider-
+  // chain dots se thoda gap rakh ke alag) — sirf 2 states dikhata hai:
+  // green (connected) ya red (baaki sab: disconnected/connecting/denied).
+  // Settings tak jaane ki zaroorat nahi bas status check karne ke liye.
+  const $termuxStatusDot = document.getElementById('termuxStatusDot');
+  function updateTermuxHeaderDot() {
+    if (!$termuxStatusDot) return;
+    const connected = Bridge.status === 'connected';
+    $termuxStatusDot.classList.toggle('connected', connected);
+    $termuxStatusDot.title = 'Termux Bridge: ' + bridgeStatusLabel(Bridge.status);
+  }
+  Bridge.listeners.add(updateTermuxHeaderDot);
+  updateTermuxHeaderDot();
+  window.__openBridgeSettingsFromDot = () => showBridgeSettingsModal();
+
+  function openSettings() {
+    updateProfileDisplay();
+    updateBridgeStatusDisplay();
+    closeDrawer();
+    $settingsPage.classList.add('open');
+  }
+  function closeSettings() {
+    $settingsPage.classList.remove('open');
+  }
+  $settingsBtn.addEventListener('click', openSettings);
+  $settingsBackBtn.addEventListener('click', closeSettings);
+
+  function showBridgeSettingsModal() {
+    const cfg = loadBridgeConfig();
+    bridgeModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Termux Bridge';
+      root.appendChild(title);
+
+      const desc = document.createElement('div');
+      desc.className = 'app-modal-text';
+      desc.textContent = 'Apne Termux mein "npm start" chalao — jo token print hoga, wahi neeche paste karo.';
+      root.appendChild(desc);
+
+      const statusLine = document.createElement('div');
+      statusLine.className = 'bridge-status-line';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      const label = document.createElement('span');
+      function refreshStatus() {
+        label.textContent = bridgeStatusLabel(Bridge.status);
+        dot.className = 'dot' + (Bridge.status === 'connected' ? ' ok' : Bridge.status === 'denied' ? ' bad' : '');
+      }
+      refreshStatus();
+      statusLine.append(dot, label);
+      root.appendChild(statusLine);
+
+      const portLabel = document.createElement('div');
+      portLabel.className = 'bridge-field-label';
+      portLabel.textContent = 'Port';
+      root.appendChild(portLabel);
+      const portInput = document.createElement('input');
+      portInput.type = 'number';
+      portInput.className = 'app-modal-input';
+      portInput.value = cfg.port || 8787;
+      root.appendChild(portInput);
+
+      const tokenLabel = document.createElement('div');
+      tokenLabel.className = 'bridge-field-label';
+      tokenLabel.textContent = 'Token';
+      root.appendChild(tokenLabel);
+      const tokenRow = document.createElement('div');
+      tokenRow.className = 'bridge-token-row';
+      const tokenInput = document.createElement('input');
+      tokenInput.type = 'text';
+      tokenInput.className = 'app-modal-input';
+      tokenInput.placeholder = 'Termux terminal se copy karo';
+      tokenInput.value = cfg.token || '';
+      tokenRow.appendChild(tokenInput);
+      root.appendChild(tokenRow);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const disconnectBtn = document.createElement('button');
+      disconnectBtn.type = 'button';
+      disconnectBtn.className = 'sm-cancel';
+      disconnectBtn.textContent = 'Disconnect';
+      disconnectBtn.addEventListener('click', () => {
+        Bridge.disconnect();
+        refreshStatus();
+        updateBridgeStatusDisplay();
+      });
+      footer.appendChild(disconnectBtn);
+
+      const connectBtn = document.createElement('button');
+      connectBtn.type = 'button';
+      connectBtn.className = 'sm-confirm';
+      connectBtn.textContent = 'Save & Connect';
+      connectBtn.addEventListener('click', async () => {
+        const port = Number(portInput.value) || 8787;
+        const token = tokenInput.value.trim();
+        saveBridgeConfig({ port, token });
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Connecting…';
+        const ok = await Bridge.connect();
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Save & Connect';
+        refreshStatus();
+        updateBridgeStatusDisplay();
+        desc.textContent = ok
+          ? 'Connected! Ab AI ke suggest kiye shell commands ko "▶ Run" se apne Termux pe chala sakte ho.'
+          : 'Connect nahi ho paya — port/token check karo, ya browser ka "local network" permission popup allow karo.';
+      });
+      footer.appendChild(connectBtn);
+
+      root.appendChild(footer);
+    });
+  }
+  $bridgeRow.addEventListener('click', showBridgeSettingsModal);
+
+  function showProfileEditModal() {
+    const profile = loadProfile() || {};
+    profileModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Naam edit karo';
+      root.appendChild(title);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'app-modal-input';
+      input.value = profile.name || '';
+      input.maxLength = 40;
+      root.appendChild(input);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', profileModal.close);
+      footer.appendChild(cancelBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'sm-confirm';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const trimmed = input.value.trim();
+        if (trimmed) {
+          saveProfile({ ...profile, name: trimmed });
+          updateProfileDisplay();
+        }
+        profileModal.close();
+      });
+      footer.appendChild(saveBtn);
+
+      root.appendChild(footer);
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+  $profileRow.addEventListener('click', showProfileEditModal);
+
+  // ── Onboarding (naya user) ──────────────────────────────────────────
+  // Jab tak localStorage mein profile.name save nahi hai, ye overlay zabardasti
+  // dikhta hai (outside-click se band nahi hota, koi Cancel nahi hai).
+  function showOnboardIfNeeded() {
+    const profile = loadProfile();
+    if (profile && profile.name) return;
+    $onboardOverlay.classList.add('open');
+    setTimeout(() => $onboardNameInput.focus(), 100);
+  }
+  function submitOnboardName() {
+    const name = $onboardNameInput.value.trim();
+    if (!name) { $onboardNameInput.focus(); return; }
+    saveProfile({ ...(loadProfile() || {}), name });
+    $onboardOverlay.classList.remove('open');
+    updateProfileDisplay();
+  }
+  $onboardSaveBtn.addEventListener('click', submitOnboardName);
+  $onboardNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitOnboardName(); }
+  });
+
+  function openSessionMenu(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = s.title;
+      root.appendChild(title);
+
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'app-modal-btn';
+      renameBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/led/32/edit.png" alt=""></span><span>Rename</span>';
+      renameBtn.addEventListener('click', () => showRenameModal(id));
+      root.appendChild(renameBtn);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'app-modal-btn danger';
+      delBtn.innerHTML = '<span class="glyph"><img src="https://img.icons8.com/led/32/delete-forever.png" alt=""></span><span>Delete</span>';
+      delBtn.addEventListener('click', () => showDeleteModal(id));
+      root.appendChild(delBtn);
+    });
+  }
+
+  function showRenameModal(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Session rename karo';
+      root.appendChild(title);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'app-modal-input';
+      input.value = s.title;
+      input.maxLength = 80;
+      root.appendChild(input);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', sessionModal.close);
+      footer.appendChild(cancelBtn);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'sm-confirm';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const trimmed = input.value.trim();
+        if (trimmed) {
+          const all = loadSessions();
+          const target = all.find(x => x.id === id);
+          if (target) {
+            target.title = sessionTitle(trimmed);
+            saveSessions(all);
+            renderSessionList();
+          }
+        }
+        sessionModal.close();
+      });
+      footer.appendChild(saveBtn);
+
+      root.appendChild(footer);
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+
+  function showDeleteModal(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+
+    sessionModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Session delete karo';
+      root.appendChild(title);
+
+      const text = document.createElement('div');
+      text.className = 'app-modal-text';
+      text.textContent = `"${s.title}" delete karna hai? Ye wapas nahi aayega.`;
+      root.appendChild(text);
+
+      const footer = document.createElement('div');
+      footer.className = 'app-modal-footer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'sm-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', sessionModal.close);
+      footer.appendChild(cancelBtn);
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'sm-confirm danger';
+      confirmBtn.textContent = 'Delete';
+      confirmBtn.addEventListener('click', () => {
+        const all = loadSessions();
+        saveSessions(all.filter(x => x.id !== id));
+        sessionModal.close();
+        if (id === activeSessionId) {
+          startNewChat();
+        } else {
+          renderSessionList();
+        }
+      });
+      footer.appendChild(confirmBtn);
+
+      root.appendChild(footer);
+    });
+  }
+
+  // ── Attach menu (+ button) ──────────────────────────────────────────
+  // Registry pattern — abhi sirf "File upload" hai, aage koi aur source
+  // (camera, Drive, link, etc.) add karna ho to bas ek naya
+  // { iconUrl, iconAlt, label, handler } object push kar do, list khud-ba-khud ban jaayegi.
+  const ATTACH_OPTIONS = [
+    {
+      iconUrl: 'https://img.icons8.com/led/32/insert-page.png',
+      iconAlt: 'Add file',
+      label: 'File upload',
+      handler: () => {
+        attachModal.close();
+        $fileInput.click();
+      },
+    },
+    {
+      iconUrl: 'https://img.icons8.com/led/32/share-2.png',
+      iconAlt: 'Termux Bridge Connect',
+      label: 'Termux Bridge Connect',
+      handler: () => {
+        attachModal.close();
+        const cfg = loadBridgeConfig();
+        addBridgeConnectCard(!!(cfg && cfg.token));
+      },
+    },
+    // Aage naye options yahan add karo.
+  ];
+
+  function openAttachMenu() {
+    attachModal.open((root) => {
+      const title = document.createElement('div');
+      title.className = 'app-modal-title';
+      title.textContent = 'Add karo';
+      root.appendChild(title);
+
+      ATTACH_OPTIONS.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'app-modal-btn';
+
+        const glyph = document.createElement('span');
+        glyph.className = 'glyph';
+        const img = document.createElement('img');
+        img.src = opt.iconUrl;
+        img.alt = opt.iconAlt || '';
+        glyph.appendChild(img);
+        btn.appendChild(glyph);
+
+        const label = document.createElement('span');
+        label.textContent = opt.label;
+        btn.appendChild(label);
+
+        btn.addEventListener('click', opt.handler);
+        root.appendChild(btn);
+      });
+    });
+  }
+
+  $attachBtn.addEventListener('click', openAttachMenu);
+
+  // ── File attachments ────────────────────────────────────────────────
+  // Har tarah ki file select ki ja sakti hai (koi type restriction nahi).
+  // Text/code files poori tarah padh ke content model ko bhej dete hain.
+  // PDF se text nikaalne ke liye pdf.js lazily load hota hai (pehli baar
+  // koi PDF attach hone par). Baaki (image, docx, zip, etc.) files sirf
+  // naam ke saath "attached" note ke roop mein bhejte hain — inka content
+  // parse nahi hota, aur model ko ye saaf bataya jaata hai (koi fake
+  // extraction nahi dikhaate).
+  let attachedFiles = []; // {id, name, size, kind, content, truncated, status}
+  const MAX_FILES = 5;
+  const MAX_CHARS_PER_FILE = 20000;
+  const TEXT_EXTENSIONS = new Set([
+    'txt','md','markdown','js','jsx','ts','tsx','py','java','c','cc','cpp','h','hpp',
+    'cs','go','rb','php','html','htm','css','scss','less','json','yml','yaml','xml',
+    'csv','tsv','sh','bash','zsh','sql','rs','swift','kt','kts','vue','svelte','ini',
+    'conf','cfg','env','log','toml','gradle','dockerfile','makefile','r','lua','pl',
+  ]);
+  // Model (Groq gpt-oss-120b) text-only hai — ye image "dekh" nahi sakta.
+  // Isliye images ko chat-text mein describe/inline nahi karte; base64 me
+  // read karke sirf sandboxFiles mein daal dete hain taaki run_code se
+  // Python (PIL/rembg/etc.) unhe real bytes ki tarah open() kar sake —
+  // e.g. background-removal jaisa kaam ab isi route se ho sakta hai.
+  const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','gif','webp','bmp','svg']);
+
+  function extOf(name) {
+    const i = name.lastIndexOf('.');
+    return i === -1 ? '' : name.slice(i + 1).toLowerCase();
+  }
+
+  function fileKind(file) {
+    const ext = extOf(file.name);
+    if (file.type === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (file.type.startsWith('text/') || file.type === 'application/json' || TEXT_EXTENSIONS.has(ext)) return 'text';
+    if (file.type.startsWith('image/') || IMAGE_EXTENSIONS.has(ext)) return 'image';
+    return 'unsupported';
+  }
+
+  $fileInput.addEventListener('change', () => {
+    const files = Array.from($fileInput.files || []);
+    $fileInput.value = ''; // reset karo taaki same file dubara select ho sake
+    for (const file of files) {
+      if (attachedFiles.length >= MAX_FILES) break;
+      addAttachedFile(file);
+    }
+  });
+
+  function addAttachedFile(file) {
+    const id = 'f' + Date.now() + Math.random().toString(36).slice(2, 7);
+    const kind = fileKind(file);
+    const entry = {
+      id, name: file.name, size: file.size, kind,
+      content: null, truncated: false,
+      status: kind === 'unsupported' ? 'unsupported' : 'reading',
+    };
+    attachedFiles.push(entry);
+    renderAttachChips();
+
+    if (kind === 'text') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        let text = String(reader.result || '');
+        if (text.length > MAX_CHARS_PER_FILE) {
+          text = text.slice(0, MAX_CHARS_PER_FILE);
+          entry.truncated = true;
+        }
+        entry.content = text;
+        entry.status = 'ready';
+        renderAttachChips();
+      };
+      reader.onerror = () => { entry.status = 'error'; renderAttachChips(); };
+      reader.readAsText(file);
+    } else if (kind === 'pdf') {
+      readPdfFile(file, entry);
+    } else if (kind === 'image') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // readAsDataURL result "data:image/png;base64,AAAA..." shape mein
+        // aata hai — sirf base64 part chahiye, prefix strip kar dete hain.
+        const dataUrl = String(reader.result || '');
+        const commaIdx = dataUrl.indexOf(',');
+        entry.content = commaIdx === -1 ? '' : dataUrl.slice(commaIdx + 1);
+        entry.encoding = 'base64';
+        entry.mimeType = file.type || 'image/jpeg';
+        entry.status = entry.content ? 'ready' : 'error';
+        renderAttachChips();
+        // Vision analysis yahan TURANT nahi hoti — Send dabane tak wait
+        // karte hain, taaki NVIDIA ko poora context (image + user ne jo
+        // bhi typed text likha ho, agar likha ho) ek saath mile. Isse
+        // uska "sirf description kaafi hai ya main model chahiye" wala
+        // decision accurate hota hai — attach ke waqt user ka text abhi
+        // likha hi nahi hota, isliye tab decide karna galat hoga.
+      };
+      reader.onerror = () => { entry.status = 'error'; renderAttachChips(); };
+      reader.readAsDataURL(file);
+    } else {
+      renderAttachChips();
+    }
+  }
+
+  // Send dabane par (attach ke turant baad NAHI) call hota hai — dekh
+  // form-submit handler neeche. `question` user ne jo bhi type kiya ho
+  // (khaali bhi ho sakta hai, agar sirf image bheji ho koi text ke bina).
+  // NVIDIA khud decide karta hai (needsMainModel flag) ki uska description/
+  // OCR/jawab hi final reply ban sakta hai, ya Chaman AI ke main text
+  // model ko involve karna padega (jaise coding help, jo vision model
+  // khud nahi de sakta).
+  async function analyzeImageWithVision(entry, question) {
+    entry.visionStatus = 'analyzing';
+    renderAttachChips();
+    try {
+      const res = await fetch('/api/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: entry.content, mimeType: entry.mimeType, question: question || '' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok || !data.description) {
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      entry.visionDescription = data.description;
+      entry.needsMainModel = !!data.needsMainModel;
+      entry.visionModel = data.model || 'kimi-k3';
+      entry.visionStatus = 'analyzed';
+    } catch (e) {
+      // Vision fail ho jaaye (dono NVIDIA models down/timeout) to bhi chat
+      // completely blocked nahi honi chahiye — bas description nahi milegi,
+      // buildOutgoingMessage purane "model isse dekh nahi sakta" wale
+      // fallback note pe wapas chala jaayega (neeche dekho), aur normal
+      // flow (main model) chalega jaisa pehle hota tha.
+      entry.visionStatus = 'vision_error';
+      entry.needsMainModel = true;
+      console.error('[vision] Image analyze fail hui:', e.message);
+    }
+    renderAttachChips();
+  }
+
+  let pdfJsLoadPromise = null;
+  function ensurePdfJs() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (pdfJsLoadPromise) return pdfJsLoadPromise;
+    pdfJsLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      script.onerror = () => reject(new Error('pdf.js load fail hua'));
+      document.head.appendChild(script);
+    });
+    return pdfJsLoadPromise;
+  }
+
+  async function readPdfFile(file, entry) {
+    try {
+      await ensurePdfJs();
+      const buf = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+      let text = '';
+      const maxPages = Math.min(pdf.numPages, 30);
+      for (let p = 1; p <= maxPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        text += content.items.map((it) => it.str).join(' ') + '\n';
+        if (text.length > MAX_CHARS_PER_FILE) break;
+      }
+      const truncated = text.length > MAX_CHARS_PER_FILE || pdf.numPages > maxPages;
+      if (text.length > MAX_CHARS_PER_FILE) text = text.slice(0, MAX_CHARS_PER_FILE);
+      text = text.trim();
+      entry.content = text || null;
+      entry.truncated = truncated;
+      entry.status = text ? 'ready' : 'unsupported';
+    } catch (e) {
+      entry.status = 'error';
+    }
+    renderAttachChips();
+  }
+
+  // Attach ki gayi text/pdf files jaise hi "ready" (content extract ho chuka)
+  // ho jaati hain, unhe sandboxFiles map mein bhi copy kar dete hain — taaki
+  // Python code isi conversation mein unhe filename se open() kar sake.
+  // (sandboxFiles poore declaration ke liye neeche "Python Sandbox" section dekho.)
+  function syncSandboxFilesFromAttached() {
+    if (typeof sandboxFiles === 'undefined') return; // load-order safety
+    for (const f of attachedFiles) {
+      if (f.status !== 'ready' || typeof f.content !== 'string') continue;
+      // Text/PDF files: plain string (legacy shape, backend treats as utf8).
+      // Images: {content, encoding:'base64'} — backend decodes to real bytes
+      // before writing into the sandbox, so Python gets an actual valid file.
+      sandboxFiles[f.name] = f.encoding === 'base64'
+        ? { content: f.content, encoding: 'base64' }
+        : f.content;
+    }
+  }
+
+  function removeAttachedFile(id) {
+    attachedFiles = attachedFiles.filter((f) => f.id !== id);
+    renderAttachChips();
+  }
+
+  function renderAttachChips() {
+    syncSandboxFilesFromAttached();
+    $attachChips.innerHTML = '';
+    $attachChips.classList.toggle('has-files', attachedFiles.length > 0);
+    for (const f of attachedFiles) {
+      const chip = document.createElement('div');
+      chip.className = 'attach-chip' +
+        (f.status === 'reading' || f.visionStatus === 'analyzing' ? ' analyzing' : '') +
+        (f.visionStatus === 'analyzed' ? ' analyzed' : '') +
+        (f.status === 'unsupported' || f.status === 'error' ? ' unsupported' : '');
+
+      const name = document.createElement('span');
+      name.className = 'chip-name';
+      name.textContent = f.name;
+      chip.appendChild(name);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'chip-remove';
+      remove.setAttribute('aria-label', 'File hatao');
+      remove.addEventListener('click', () => removeAttachedFile(f.id));
+      chip.appendChild(remove);
+
+      $attachChips.appendChild(chip);
+    }
+  }
+
+  // History/backend ke liye poora text banata hai — attached files ka content
+  // (ya "content nahi mila" note) pehle, phir user ka typed message.
+  function buildOutgoingMessage(text, files) {
+    if (!files.length) return text;
+    const parts = files.map((f) => {
+      if (f.kind === 'image' && f.status === 'ready') {
+        // Agar NVIDIA vision (kimi-k3/nemotron) ne pehle hi is image ko
+        // analyze kar diya hai (auto-analyze-on-attach — dekh
+        // analyzeImageWithVision), to us description ko REAL text context ki
+        // tarah bhej do — ab text-only chat model ko bhi pata hai image mein
+        // kya tha, sirf run_code se hi nahi.
+        if (f.visionStatus === 'analyzed' && f.visionDescription) {
+          return `[Attached image: ${f.name} — NVIDIA vision model se mila description/OCR:]\n${f.visionDescription}\n\n[Real image bytes bhi sandbox mein available hain ('uploads/${f.name}' / 'modify/${f.name}') — agar user ne is image pe koi processing maangi hai (background remove, resize, filter, etc.), [ACTION:run_code] se Python use kar.]`;
+        }
+        // Vision abhi analyze ho rahi hai (race — user ne turant message bhej
+        // diya) ya fail ho gayi — purana fallback note (sirf run_code route).
+        const visionNote = f.visionStatus === 'analyzing'
+          ? ' (image abhi analyze ho rahi thi, description available nahi ho paaya is turn mein)'
+          : f.visionStatus === 'vision_error'
+          ? ' (image analyze karne ki koshish fail ho gayi)'
+          : '';
+        return `[Attached image: ${f.name} — model isse directly "dekh" nahi sakta (text-only)${visionNote}, lekin real image bytes sandbox mein available hain. Agar user ne is image pe koi processing maangi hai (background remove, resize, filter, etc.), to [ACTION:run_code] se Python use karke seedha 'uploads/${f.name}' ya 'modify/${f.name}' se open() kar aur process kar (zaroorat ho to 'pip install pillow'/'rembg' pehle chala le) — user se dobara image maangne ki zaroorat NAHI hai.]`;
+      }
+      if (f.status === 'ready' && f.content) {
+        const ext = extOf(f.name);
+        const note = f.truncated ? '\n... (file lambi thi, truncate ki gayi)' : '';
+        return `[Attached file: ${f.name}]\n\`\`\`${ext}\n${f.content}${note}\n\`\`\``;
+      }
+      return `[Attached file: ${f.name} — content extract nahi ho saka (unsupported type ya error), sirf naam pata hai]`;
+    });
+    const filesBlock = parts.join('\n\n');
+    return text ? `${filesBlock}\n\n${text}` : filesBlock;
+  }
+
+  // Chhote, halke greeting messages — har naya chat/session-switch pe randomly
+  // ek chun liya jaata hai, taaki screen har baar bilkul same na lage.
+  const EMPTY_STATE_GREETINGS = [
+    'Aaj kya madad karu?',
+    'Kya banayein aaj?',
+    'Bata, kya kaam hai?',
+    'Kis cheez mein help chahiye?',
+  ];
+
+  function clearMain() {
+    const profile = loadProfile();
+    const name = profile && profile.name ? profile.name : '';
+    const greetLine = name ? `Hi ${escapeHtml(name)} 👋` : 'Hi 👋';
+    const subLine = EMPTY_STATE_GREETINGS[Math.floor(Math.random() * EMPTY_STATE_GREETINGS.length)];
+    $main.innerHTML = `<div class="empty" id="empty">
+      <div class="glyph-big"><img src="logo.png" class="rs-mark empty-mark" width="40" height="40" alt="Chaman AI"></div>
+      <div class="empty-greet">${greetLine}</div>
+      <p>${escapeHtml(subLine)}</p>
+    </div>`;
+  }
+
+  function openSession(id) {
+    const sessions = loadSessions();
+    const s = sessions.find(s => s.id === id);
+    if (!s) return;
+    activeSessionId = id;
+    history = s.messages;
+    stickToBottom = true;
+    sandboxFiles = {}; // purani session ki attached files ka content persist nahi hota, isliye fresh
+    clearMain();
+    let lastAssistantTarget = null;
+    for (const msg of history) {
+      if (msg.role === 'user') {
+        if (msg.silent) continue; // Termux run ka silent result — reload pe bhi bubble nahi dikhani (lastAssistantTarget yahin tak zinda rehta hai)
+        addUserBubble(msg.displayText != null ? msg.displayText : msg.content, msg.files);
+        lastAssistantTarget = null;
+      } else if (msg.role === 'assistant') {
+        const tokLabel = msg.tokens && msg.tokens.total ? ` · ${formatTokenCount(msg.tokens.total)} tok` : '';
+        const metaText = msg.provider ? `${msg.provider} · ${msg.model || ''}${tokLabel}` : null;
+        if (msg.continuesPrevious && lastAssistantTarget) {
+          appendAssistantContinuation(lastAssistantTarget, msg.content, metaText, null, null, false);
+        } else {
+          lastAssistantTarget = addAssistantBubble(msg.content, metaText, false, false);
+        }
+      }
+    }
+    const last = history[history.length - 1];
+    lightDot(last && last.provider ? last.provider : null);
+    sessionTokenTotal = computeSessionTokenTotal(history);
+    updateTokenBadge();
+    renderSessionList();
+    closeDrawer();
+    scrollBottom(true);
+  }
+
+  function startNewChat() {
+    activeSessionId = null;
+    history = [];
+    stickToBottom = true;
+    sandboxFiles = {};
+    clearMain();
+    lightDot(null);
+    sessionTokenTotal = 0;
+    updateTokenBadge();
+    renderSessionList();
+    closeDrawer();
+    updateJumpBtn();
+    $input.focus();
+  }
+
+  function openDrawer() {
+    $drawer.classList.add('open');
+    $overlay.classList.add('open');
+  }
+  function closeDrawer() {
+    $drawer.classList.remove('open');
+    $overlay.classList.remove('open');
+  }
+
+  $menuBtn.addEventListener('click', openDrawer);
+  $overlay.addEventListener('click', closeDrawer);
+  $newChatBtn.addEventListener('click', startNewChat);
+
+  // App load pe: hamesha ek fresh/naya session shuru hota hai. Purani sessions
+  // localStorage mein save rehti hain aur drawer mein dikhti hain — bas auto-resume
+  // nahi hoti, user manually tap karke khol sakta hai.
+  (function init() {
+    renderSessionList();
+    history = [];
+    activeSessionId = null;
+    lightDot(null);
+    sessionTokenTotal = 0;
+    updateTokenBadge();
+    updateProfileDisplay();
+    clearMain();
+    showOnboardIfNeeded();
+
+    // Termux Bridge: agar pehle se port/token saved hai, silently reconnect
+    // try karo. Isse pehle status hamesha 'disconnected' se shuru hota tha
+    // har app reload pe — chahe Termux server actually chal raha ho aur
+    // token bilkul sahi ho — jab tak user khud Settings mein jaake dobara
+    // "Save & Connect" na dabaye. Fail ho (Termux band hai abhi) to bhi
+    // koi error UI nahi dikhti, bas status 'denied'/'disconnected' rehta
+    // hai jaisa pehle tha — sirf ab genuinely-connected case turant pakda
+    // jaata hai.
+    const savedBridgeCfg = loadBridgeConfig();
+    if (savedBridgeCfg && savedBridgeCfg.token) {
+      Bridge.connect();
+    }
+  })();
+
+  $input.addEventListener('input', () => {
+    $input.style.height = 'auto';
+    $input.style.height = Math.min($input.scrollHeight, 110) + 'px';
+  });
+
+  // Sirf actual character-entry / edit keys pe tick bajaye — modifier
+  // combos (Ctrl+C, Cmd+V, etc.) ya arrow/nav keys pe nahi.
+  $input.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter') {
+      SoundFX.userTick();
+    }
+  });
+
+  $input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      $form.requestSubmit();
+    }
+  });
+
+  // Keyboard khulne pe kuch Android browsers `interactive-widget=resizes-content`
+  // ko ignore karke poore page ko scroll kar dete hain (isse messages "upar" chale
+  // jaate hain jab tak khud scroll na karo). visualViewport API se hum body ki
+  // height ko keyboard ke hisaab se manually sync karte hain, aur input focus hote
+  // hi neeche pin kar dete hain — taaki chat aur input box hamesha visible rahein.
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    function syncViewportHeight() {
+      document.body.style.height = vv.height + 'px';
+      window.scrollTo(0, 0);
+      scrollBottom(true);
+    }
+    vv.addEventListener('resize', syncViewportHeight);
+    vv.addEventListener('scroll', () => window.scrollTo(0, 0));
+  }
+  $input.addEventListener('focus', () => {
+    // Keyboard animate hote hue thoda time leta hai — chhota delay ke baad pin karo.
+    setTimeout(() => scrollBottom(true), 60);
+    setTimeout(() => scrollBottom(true), 300);
+  });
+
+  function isNearBottom(px) {
+    return $main.scrollHeight - $main.scrollTop - $main.clientHeight <= (px == null ? 64 : px);
+  }
+
+  function updateJumpBtn() {
+    $jumpBtn.classList.toggle('show', !stickToBottom);
+  }
+
+  // force=true wale calls hamesha neeche pin karte hain (jaise user ka apna
+  // message bhejna, session kholna, keyboard khulna). Baaki sab (typing/streaming
+  // ke dauraan) sirf tab scroll karte hain jab user khud neeche par hi ho —
+  // isse agar wo upar scroll kar ke padh raha ho to beech mein rukawat nahi aati.
+  function scrollBottom(force) {
+    if (touching) return; // user ki ungli abhi screen par hai — kabhi force mat karo
+    if (!force && !stickToBottom) return;
+    $main.scrollTop = $main.scrollHeight;
+    stickToBottom = true;
+    updateJumpBtn();
+  }
+
+  let scrollTick = null;
+  $main.addEventListener('scroll', () => {
+    if (scrollTick) return;
+    scrollTick = requestAnimationFrame(() => {
+      stickToBottom = isNearBottom();
+      updateJumpBtn();
+      scrollTick = null;
+    });
+  });
+
+  // CRITICAL: typewriter effect har ~14ms pe DOM update karta hai, aur us hisaab
+  // se scrollBottom() bhi utni hi baar call hoti hai. Agar hum sirf 'scroll' event
+  // ka wait karte (jo tabhi fire hota hai jab scrollTop already badal chuka ho), to
+  // user ka touch-drag aur hamara forced-scroll ek race mein pad jaate the — user
+  // ka gesture start hone se pehle hi agla forced-scroll usse "cancel" kar deta tha,
+  // isliye upar scroll karna practically असंभव lagta tha. Fix: touchmove/wheel ka
+  // pehla pixel milte hi (scrollTop badalne se bhi pehle) stickiness turant off kar do.
+  function userInitiatedScroll() {
+    if (stickToBottom) {
+      stickToBottom = false;
+      updateJumpBtn();
+    }
+  }
+  $main.addEventListener('touchmove', userInitiatedScroll, { passive: true });
+  $main.addEventListener('wheel', userInitiatedScroll, { passive: true });
+  $main.addEventListener('touchstart', () => { touching = true; }, { passive: true });
+  $main.addEventListener('touchend', () => { touching = false; }, { passive: true });
+  $main.addEventListener('touchcancel', () => { touching = false; }, { passive: true });
+
+  $jumpBtn.addEventListener('click', () => {
+    stickToBottom = true;
+    $main.scrollTo({ top: $main.scrollHeight, behavior: 'smooth' });
+    updateJumpBtn();
+  });
+
+  function addUserBubble(text, filesMeta) {
+    const emptyEl = $main.querySelector('.empty');
+    if (emptyEl) emptyEl.remove();
+    const row = document.createElement('div');
+    row.className = 'row user';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if (filesMeta && filesMeta.length) {
+      const filesWrap = document.createElement('div');
+      filesWrap.className = 'msg-files';
+      filesMeta.forEach((f) => {
+        const tag = document.createElement('span');
+        tag.className = 'msg-file-tag';
+        tag.textContent = f.name;
+        filesWrap.appendChild(tag);
+      });
+      bubble.appendChild(filesWrap);
+    }
+    if (text) {
+      const textEl = document.createElement('span');
+      textEl.textContent = text;
+      bubble.appendChild(textEl);
+    }
+
+    row.appendChild(bubble);
+    $main.appendChild(row);
+    scrollBottom(true);
+  }
+
+  function addThinking() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.id = 'thinkingRow';
+    row.innerHTML = `<div class="thinking">
+      <span class="thinking-orb">
+        <span class="aurora"></span>
+        <img src="logo.png" class="rs-mark" width="24" height="24" alt="Chaman AI">
+      </span>
+    </div>`;
+    $main.appendChild(row);
+    scrollBottom(true);
+    return row;
+  }
+
+  // Live web-search status row — backend jab bhi ek [ACTION:web_search] phase
+  // stream karta hai ('searching' -> 'found'/'search_failed' -> 'answering'),
+  // yahi row us waqt real-time mein update hoti hai.
+  function addSearchStatus() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.innerHTML = `
+      <div class="search-status">
+        <span class="glass"><img src="https://img.icons8.com/dotty/32/window-search.png" alt="search"></span>
+        <span class="status-text"></span>
+        <span class="scan-bar"></span>
+      </div>`;
+    $main.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function updateSearchStatus(row, phase, query, count) {
+    if (!row) return;
+    const box = row.querySelector('.search-status');
+    const glass = row.querySelector('.glass');
+    const textEl = row.querySelector('.status-text');
+    if (!box) return;
+
+    if (phase === 'searching') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/dotty/32/window-search.png" alt="search">';
+      textEl.innerHTML = `"${escapeHtml(query || '')}" search kar raha hoon<span class="dots"></span>`;
+    } else if (phase === 'found') {
+      box.className = 'search-status found';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/ok.png" alt="done">';
+      textEl.textContent = `${count} results mile — jawab bana raha hoon`;
+    } else if (phase === 'search_failed') {
+      box.className = 'search-status failed';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/box-important.png" alt="warning">';
+      textEl.textContent = 'Live search fail ho gaya — apni knowledge se jawab de raha hoon';
+    } else if (phase === 'answering') {
+      box.className = 'search-status found';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/edit.png" alt="writing">';
+      textEl.innerHTML = `Jawab likh raha hoon<span class="dots"></span>`;
+    }
+    scrollBottom();
+  }
+
+  // Live code-run status row — search-status jaisi hi CSS classes reuse karte
+  // hain (bas emoji/text alag), taaki visually consistent lage.
+  function addCodeStatus() {
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    row.innerHTML = `
+      <div class="search-status">
+        <span class="glass"><img src="https://img.icons8.com/wired/32/python.png" alt="python"></span>
+        <span class="status-text"></span>
+        <span class="scan-bar"></span>
+      </div>`;
+    $main.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function updateCodeStatus(row, phase, detail) {
+    if (!row) return;
+    const box = row.querySelector('.search-status');
+    const glass = row.querySelector('.glass');
+    const textEl = row.querySelector('.status-text');
+    if (!box) return;
+    const d = detail ? escapeHtml(detail) : '';
+
+    if (phase === 'running') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/wired/32/python.png" alt="python">';
+      textEl.innerHTML = `Python code sandbox mein chala raha hoon<span class="dots"></span>`;
+    } else if (phase === 'reading') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/insert-page.png" alt="reading">';
+      textEl.innerHTML = `"${d}" padh raha hoon<span class="dots"></span>`;
+    } else if (phase === 'writing') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/edit.png" alt="writing">';
+      textEl.innerHTML = `"${d}" likh raha hoon<span class="dots"></span>`;
+    } else if (phase === 'installing') {
+      box.className = 'search-status';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/automatic.png" alt="installing">';
+      textEl.innerHTML = `"${d}" package install kar raha hoon<span class="dots"></span>`;
+    } else if (phase === 'done') {
+      box.className = 'search-status found';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/ok.png" alt="done">';
+      textEl.textContent = 'Code chal gaya — jawab bana raha hoon';
+    } else if (phase === 'failed') {
+      box.className = 'search-status failed';
+      glass.innerHTML = '<img src="https://img.icons8.com/led/32/box-important.png" alt="warning">';
+      textEl.textContent = 'Code mein error aayi — model ko bata raha hoon';
+    }
+    scrollBottom();
+  }
+
+  // ── Python Sandbox (Vercel Sandbox — real server-side microVM) ─────────
+  // Model jo bhi [ACTION:run_code] se code bhejta hai, wo /api/sandbox ko
+  // POST kiya jaata hai, jahan wo ek naye, isolated Vercel Sandbox
+  // (Firecracker microVM) mein chalta hai — server-side, poori file 
+  // api/sandbox.js dekho.
+  //
+  // 2026-08-05: Pehle ye browser ke andar Pyodide (WASM) Web Worker mein
+  // chalta tha. Wahan ek real bug tha — timeout hone par worker actually
+  // kill nahi hota tha (sirf JS-side wait chhod dete the), aur worker ek
+  // hi singleton instance ki tarah reuse hota tha. Matlab ek infinite loop
+  // poore sandbox ko HAMESHA ke liye stuck kar deta tha (page refresh tak).
+  // Ab har run apna khud ka fresh sandbox leta hai aur server khud usko
+  // force-stop karta hai (timeout ho ya normal finish) — koi shared state
+  // nahi bachta jo stuck ho sake. Bonus: real network (pip install kaam
+  // karta hai ab) aur binary files bhi ab support ho sakti hain (abhi bhi
+  // sirf text/utf8 return hoti hai, binary readback aage add kar sakte hain).
+  //
+  // Is conversation mein ab tak jitni bhi text/pdf files attach ki gayi hain,
+  // unka content yahan filename -> content map mein rakhte hain — taaki
+  // request ke saath "current files" bhej sake. Naya chat shuru hone ya
+  // session switch hone par reset hota hai.
+  let sandboxFiles = {};
+  // Server ka apna 45s hard-timeout hai (api/sandbox.js); yahan thoda buffer
+  // rakha hai taaki network latency ki wajah se time na khatam ho jaaye.
+  const CODE_TIMEOUT_MS = 50000;
+
+  // { ok, stdout, error?, outputFiles? } return karta hai. Kabhi reject nahi
+  // hota — network fail/timeout bhi ek "ok:false" result ki tarah resolve
+  // hota hai, taaki caller loop mein hamesha aage badh sake.
+  // onProgress(phase, detail) — abhi sirf ek baar 'running' fire hota hai
+  // (server se live phase-events abhi stream nahi hote — HTTP request/
+  // response hai, Worker jaisi postMessage progress nahi). Future mein
+  // /api/sandbox ko NDJSON stream banaya ja sakta hai agar live progress
+  // wapas chahiye.
+  async function runPythonSandboxed(code, onProgress) {
+    if (typeof onProgress === 'function') onProgress('running', '');
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CODE_TIMEOUT_MS);
+    try {
+      const resp = await fetch('/api/sandbox', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, inputFiles: sandboxFiles }),
+      });
+      clearTimeout(timer);
+
+      let data;
+      try {
+        data = await resp.json();
+      } catch (parseErr) {
+        return { ok: false, stdout: '', error: `Sandbox se invalid response mila (HTTP ${resp.status})` };
+      }
+      if (!resp.ok && data.ok === undefined) {
+        return { ok: false, stdout: '', error: data.error || `Sandbox HTTP ${resp.status}` };
+      }
+      return data;
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = err && err.name === 'AbortError';
+      return {
+        ok: false,
+        stdout: '',
+        error: isAbort
+          ? `Timeout — code ${CODE_TIMEOUT_MS / 1000} second se zyada chal gaya, rok diya gaya.`
+          : 'Sandbox request fail hui (network/server issue): ' + String((err && err.message) || err),
+      };
+    }
+  }
+
+  // Code-run result ko ek "user" turn ki tarah wapas model ko bhejne ke liye
+  // format karta hai — web_search ke formatSearchResultsForModel jaisa hi pattern.
+  function formatCodeResultForModel(code, result) {
+    if (result.ok) {
+      const out = (result.stdout || '').trim();
+      const resultLine = result.result ? `\nReturn value: ${result.result}` : '';
+      const modifiedFiles = (result.outputFiles || []).filter((f) => f.kind === 'modified');
+      const newFiles = (result.outputFiles || []).filter((f) => f.kind !== 'modified');
+      const fileBits = [];
+      if (modifiedFiles.length) fileBits.push(`Modify hui files (existing attached file update hui): ${modifiedFiles.map(f => f.name).join(', ')}`);
+      if (newFiles.length) fileBits.push(`Nayi (brand-new) files: ${newFiles.map(f => f.name).join(', ')}`);
+      const filesLine = fileBits.length
+        ? `\n${fileBits.join('\n')}\n(User ko ye files already download button ki tarah "Modified"/"New" card mein dikh rahi hain — tujhe sirf naam mention karna hai, content dobara mat likh.)`
+        : `\nKOI FILE CREATE/SAVE NAHI HUI iss run mein. Agar user ne file maangi thi, to "file ban gayi"/"successfully create ho gayi"/"download button de diya" jaisa KABHI mat bol — saaf bata ki file nahi bani (code mein likhna reh gaya, ya path/filename galat tha, ya error aayi), aur agar zaroorat ho to sahi kiya hua code doosri baar bhej.`;
+      return `[Python code run ho gaya, output:]\n${out || '(koi stdout output nahi tha)'}${resultLine}${filesLine}\n\n[Iske base pe user ko seedha, natural Hinglish jawab de.]`;
+    }
+    return `[Python code run karte waqt error aayi:]\n${result.error || 'Unknown error'}\n${result.stdout ? `\nAb tak ka stdout:\n${result.stdout}` : ''}\n\n[User ko chhote mein batao ki code mein kya galat hua, aur agar fix possible ho to sahi kiya hua code TURANT [ACTION:run_code] se dobara (khud) bhej de aur run kar — code ko sirf plain text/markdown mein "suggestion" ki tarah mat dikha, aur "batao to run kar dun?" jaisi permission bhi mat maang. [ACTION:run_code] khud-ba-khud chalta hai, isliye directly retry kar.]`;
+  }
+
+  // ── markdown renderer: headings, tables, lists, bold/italic/inline-code, fenced code blocks ──
+  let cbCounter = 0;
+  const codeStore = {}; // id -> {lang, code} (copy button ke liye, escaped HTML se alag rakha)
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // sirf inline patterns (bold/italic/inline-code) — block-level text ke andar use hota hai
+  function inlineFormat(str) {
+    let text = escapeHtml(str);
+    text = text.replace(/`([^`\n]+)`/g, (_, c) => `<code class="inline-code">${c}</code>`);
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    text = text.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    return text;
+  }
+
+  function isSeparatorRow(line) {
+    return line != null && line.includes('-') && /^\s*\|?[\s:\-|]+\|?\s*$/.test(line);
+  }
+
+  function splitTableRow(line) {
+    let l = line.trim();
+    if (l.startsWith('|')) l = l.slice(1);
+    if (l.endsWith('|')) l = l.slice(0, -1);
+    return l.split('|').map(c => c.trim());
+  }
+
+  function tableHtml(headerCells, rows) {
+    const thead = `<tr>${headerCells.map(c => `<th>${inlineFormat(c)}</th>`).join('')}</tr>`;
+    const tbody = rows
+      .map(r => `<tr>${r.map(c => `<td>${inlineFormat(c)}</td>`).join('')}</tr>`)
+      .join('');
+    return `<div class="md-table-wrap"><table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  }
+
+  // Model kabhi-kabhi shell command ko galat/missing language tag ke saath
+  // bhej deta hai (```console, ```cmd, ```terminal, ```sh-session, ya bina
+  // tag ke) — system prompt ab isko explicitly ```bash use karne ko bolta
+  // hai, lekin ek safety-net ke taur pe yahan bhi common variants cover kar
+  // rahe hain taaki aisi galti se Run button gayab na ho.
+  const SHELL_LANGS = new Set(['bash', 'sh', 'shell', 'zsh', 'termux', 'console', 'cmd', 'terminal', 'sh-session', 'shell-session', 'shellsession']);
+
+  function codeBlockHtml(id) {
+    const { lang, code, live } = codeStore[id];
+    const isShell = SHELL_LANGS.has((lang || '').toLowerCase());
+    // Live turn ka shell block bana hai aur abhi tak Run nahi hua — jab tak
+    // Run poora na ho, naya message bhejna lock rakhna hai (taaki AI ek
+    // command ke baad chup-chaap agla suggest na kar de).
+    if (isShell && live) markPendingRun(id);
+
+    const actionsHtml = isShell
+      ? `<div class="codeblock-actions">
+           <button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>
+           <button type="button" class="run-btn" id="runbtn-${id}" onclick="runShellBlock('${id}')">▶ Run</button>
+         </div>`
+      : `<button type="button" class="copy-btn" onclick="copyCode('${id}')">Copy</button>`;
+
+    const outputHtml = isShell
+      ? `<div class="codeblock-output" id="out-${id}"><pre id="outpre-${id}"></pre><div class="exit-line" id="exitline-${id}"></div></div>
+         <div class="codeblock-stdin" id="stdinrow-${id}" style="display:none;">
+           <div class="stdin-wait-hint" id="stdinhint-${id}"></div>
+           <div class="stdin-input-row">
+             <input type="text" id="stdin-${id}" placeholder="Input bhejo…">
+             <button type="button" onclick="sendShellStdin('${id}')">Send</button>
+           </div>
+         </div>`
+      : '';
+
+    return `<div class="codeblock" data-id="${id}">
+      <div class="codeblock-head">
+        <span class="lang">${escapeHtml(lang || 'text')}</span>
+        ${actionsHtml}
+      </div>
+      <pre><code>${escapeHtml(code)}</code></pre>
+      ${outputHtml}
+    </div>`;
+  }
+
+  // ── LaTeX/KaTeX support ──
+  // mathStore mein raw latex source rakhte hain, ussi tarah jaise codeStore
+  // code rakhta hai — placeholder ek "invisible" marker hai jisme koi
+  // HTML-special character (& < >) nahi hota, isliye woh inlineFormat ke
+  // escapeHtml se safely guzar jaata hai aur baad me asli KaTeX HTML se
+  // replace ho jaata hai.
+  let mathCounter = 0;
+  const mathStore = {};
+
+  function stashMath(latex, displayMode) {
+    const id = 'm' + (mathCounter++);
+    mathStore[id] = { latex, displayMode };
+    return `\u0002${id}\u0002`;
+  }
+
+  // Text ke andar se \[..\], \(..\), $$..$$ nikaal ke placeholder daal do.
+  // Order zaroori hai: pehle block-level (\[..\] aur $$..$$), phir inline (\(..\)).
+  function extractMath(text) {
+    let out = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, latex) => stashMath(latex, true));
+    out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_, latex) => stashMath(latex, true));
+    out = out.replace(/\\\(([\s\S]+?)\\\)/g, (_, latex) => stashMath(latex, false));
+    return out;
+  }
+
+  function renderMathHtml(id) {
+    const entry = mathStore[id];
+    if (!entry) return '';
+    if (typeof katex === 'undefined') {
+      // KaTeX load nahi hui (network issue) — raw latex hi dikha do taaki
+      // kam se kam kuch dikhe, silently gayab na ho jaaye.
+      const raw = escapeHtml(entry.displayMode ? `\\[${entry.latex}\\]` : `\\(${entry.latex}\\)`);
+      return entry.displayMode ? `<div class="md-math-block">${raw}</div>` : `<span class="md-math-inline">${raw}</span>`;
+    }
+    try {
+      const html = katex.renderToString(entry.latex, {
+        throwOnError: false,
+        displayMode: entry.displayMode,
+        strict: false,
+      });
+      return entry.displayMode ? `<div class="md-math-block">${html}</div>` : `<span class="md-math-inline">${html}</span>`;
+    } catch (err) {
+      return `<span class="md-math-error">[LaTeX error]</span>`;
+    }
+  }
+
+  function renderMarkdown(raw, live) {
+    // step 0: LaTeX segments ko pehle nikaal lo (code blocks se bhi pehle,
+    // taaki ```...``` ke andar ke \[ \] galti se match na ho jaayein — code
+    // fences already literal backticks maangte hain jo alag hi handle hote
+    // hain, is liye order safe hai).
+    const withMathPlaceholders = extractMath(raw);
+
+    // step 1: fenced code blocks nikaal ke placeholder line daal do (raw text par, escape se pehle)
+    const withPlaceholders = withMathPlaceholders.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      const id = 'cb' + (cbCounter++);
+      codeStore[id] = { lang: lang || '', code: code.replace(/\n$/, ''), live: !!live };
+      return `\u0000${id}\u0000`;
+    });
+
+    const lines = withPlaceholders.split('\n');
+    let html = '';
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      if (line.trim() === '') { i++; continue; }
+
+      // fenced code placeholder
+      if (/^\u0000cb\d+\u0000$/.test(line.trim())) {
+        html += line.trim();
+        i++;
+        continue;
+      }
+
+      // heading
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        const level = h[1].length;
+        html += `<h${level} class="md-h">${inlineFormat(h[2])}</h${level}>`;
+        i++;
+        continue;
+      }
+
+      // table (current line has |, next line is the ---|--- separator)
+      if (line.includes('|') && isSeparatorRow(lines[i + 1])) {
+        const headerCells = splitTableRow(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim() !== '' && lines[i].includes('|')) {
+          rows.push(splitTableRow(lines[i]));
+          i++;
+        }
+        html += tableHtml(headerCells, rows);
+        continue;
+      }
+
+      // unordered list
+      if (/^\s*[-*]\s+/.test(line)) {
+        let items = '';
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          items += `<li>${inlineFormat(lines[i].replace(/^\s*[-*]\s+/, ''))}</li>`;
+          i++;
+        }
+        html += `<ul class="md-list">${items}</ul>`;
+        continue;
+      }
+
+      // ordered list
+      if (/^\s*\d+\.\s+/.test(line)) {
+        let items = '';
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+          items += `<li>${inlineFormat(lines[i].replace(/^\s*\d+\.\s+/, ''))}</li>`;
+          i++;
+        }
+        html += `<ol class="md-list">${items}</ol>`;
+        continue;
+      }
+
+      // paragraph: consecutive plain lines until something else starts
+      const paraLines = [];
+      while (
+        i < lines.length &&
+        lines[i].trim() !== '' &&
+        !/^#{1,6}\s+/.test(lines[i]) &&
+        !/^\s*[-*]\s+/.test(lines[i]) &&
+        !/^\s*\d+\.\s+/.test(lines[i]) &&
+        !/^\u0000cb\d+\u0000$/.test(lines[i].trim()) &&
+        !(lines[i].includes('|') && isSeparatorRow(lines[i + 1]))
+      ) {
+        paraLines.push(lines[i]);
+        i++;
+      }
+      if (paraLines.length === 1 && /^\u0002m\d+\u0002$/.test(paraLines[0].trim())) {
+        // Sirf ek standalone block-math placeholder — <p> ke andar <div> daalna
+        // invalid nesting hota, isliye seedha placeholder chhod do (step 3 mein
+        // divi> ban jaayega).
+        html += paraLines[0].trim();
+      } else if (paraLines.length) {
+        html += `<p class="md-p">${paraLines.map(inlineFormat).join('<br>')}</p>`;
+      } else {
+        i++; // safety net, avoid infinite loop
+      }
+    }
+
+    // step 2: code block placeholders ko asli block se replace karo
+    html = html.replace(/\u0000(cb\d+)\u0000/g, (_, id) => codeBlockHtml(id));
+
+    // step 3: math placeholders ko asli KaTeX-rendered HTML se replace karo
+    html = html.replace(/\u0002(m\d+)\u0002/g, (_, id) => renderMathHtml(id));
+
+    return html;
+  }
+
+  window.copyCode = function (id) {
+    const entry = codeStore[id];
+    if (!entry) return;
+    navigator.clipboard.writeText(entry.code).then(() => {
+      const btn = document.querySelector(`.codeblock[data-id="${id}"] .copy-btn`);
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  };
+
+  // Shell codeblock ka "▶ Run" — Bridge se connect karke command chalata hai,
+  // live stdout/stderr dikhata hai, aur khatam hone par poora result agla
+  // "user" turn ki tarah AI ko wapas bhej deta hai (jaise ask_user ka jawab).
+  window.runShellBlock = function (id) {
+    const entry = codeStore[id];
+    if (!entry) return;
+    const runBtn = document.getElementById(`runbtn-${id}`);
+    const outBox = document.getElementById(`out-${id}`);
+    const outPre = document.getElementById(`outpre-${id}`);
+    const exitLine = document.getElementById(`exitline-${id}`);
+    const stdinRow = document.getElementById(`stdinrow-${id}`);
+    const stdinHint = document.getElementById(`stdinhint-${id}`);
+    if (!runBtn || !outBox) return;
+
+    outBox.classList.add('show');
+    outPre.textContent = '';
+    exitLine.textContent = '';
+    exitLine.className = 'exit-line';
+    stdinRow.style.display = 'flex';
+    stdinRow.classList.remove('waiting');
+    if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
+    runBtn.textContent = '⏹ Stop';
+    runBtn.classList.add('running');
+    runBtn.onclick = () => window.stopShellBlock(id);
+
+    let fullOutput = '';
+
+    Bridge.run(entry.code, {
+      onOutput(stream, data) {
+        fullOutput += data;
+        outPre.textContent += data;
+        outBox.scrollTop = outBox.scrollHeight;
+      },
+      onWaitingInput(waiting) {
+        // Server ne /proc check karke bataya hai ki command sach mein
+        // stdin ka wait kar rahi hai — sirf tabhi hint/highlight dikhao,
+        // hamesha nahi (jaisa pehle hota tha).
+        stdinRow.classList.toggle('waiting', waiting);
+        if (stdinHint) {
+          stdinHint.textContent = waiting ? '⌨ Command input maang rahi hai…' : '';
+          stdinHint.classList.toggle('show', waiting);
+        }
+      },
+      onExit(code) {
+        runBtn.textContent = '▶ Run';
+        runBtn.classList.remove('running');
+        runBtn.onclick = () => window.runShellBlock(id);
+        stdinRow.style.display = 'none';
+        stdinRow.classList.remove('waiting');
+        if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
+        exitLine.innerHTML = code === 0
+          ? '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="ok"> Exit code 0'
+          : `<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> Exit code ${code}`;
+        exitLine.className = 'exit-line ' + (code === 0 ? 'ok' : 'fail');
+        scrollBottom();
+        clearPendingRun(id);
+        if (!busy) {
+          // Result chat mein alag se user-bubble ki tarah nahi dikhana — bas
+          // silently AI ko agla context de do. Aur jawab bhi isi purani
+          // bubble (jisme ye command tha) ke andar continue ho, nayi bubble
+          // na bane.
+          const wrapEl = runBtn.closest('.wrap');
+          send(formatTermuxResultForModel(entry.code, fullOutput, code), null, [], true, { wrapEl });
+        }
+      },
+      onError(message) {
+        runBtn.textContent = '▶ Run';
+        runBtn.classList.remove('running');
+        runBtn.onclick = () => window.runShellBlock(id);
+        stdinRow.style.display = 'none';
+        stdinRow.classList.remove('waiting');
+        if (stdinHint) { stdinHint.textContent = ''; stdinHint.classList.remove('show'); }
+        exitLine.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="fail"> ' + escapeHtml(message);
+        exitLine.className = 'exit-line fail';
+        scrollBottom();
+        clearPendingRun(id);
+      },
+    });
+  };
+
+  window.stopShellBlock = function (id) {
+    Bridge.kill();
+  };
+
+  window.sendShellStdin = function (id) {
+    const input = document.getElementById(`stdin-${id}`);
+    const outPre = document.getElementById(`outpre-${id}`);
+    if (!input || !input.value) return;
+    Bridge.sendStdin(input.value);
+    if (outPre) outPre.textContent += `> ${input.value}\n`;
+    input.value = '';
+  };
+
+  // ── Sound FX (typing ticks) ──────────────────────────────────────────
+  // Web Audio API se live synthesize kiya jaata hai — koi .mp3/.wav asset
+  // load nahi karna padta, instant hai aur offline bhi chalega. Do alag
+  // "premium tick" sounds: user ke type karne pe crisp/higher-pitch click,
+  // AI ke jawab type-out hone pe softer/lower-pitch tick — taaki dono
+  // clearly alag sunayi dein.
+  const SoundFX = (() => {
+    let ctx = null;
+    let unlocked = false;
+
+    function getCtx() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      }
+      return ctx;
+    }
+
+    // Mobile browsers AudioContext ko "suspended" state mein start karte
+    // hain jab tak ek real user-gesture (touch/click/key) na aaye — pehle
+    // gesture pe hi resume kar dete hain, taaki baad mein sound chalne mein
+    // koi delay/silent-fail na ho.
+    function unlock() {
+      if (unlocked) return;
+      const c = getCtx();
+      if (!c) return;
+      if (c.state === 'suspended') c.resume().catch(() => {});
+      unlocked = true;
+    }
+    ['pointerdown', 'keydown'].forEach((ev) =>
+      document.addEventListener(ev, unlock, { once: true, passive: true })
+    );
+
+    // Ek chhota synthesized click/tick. freq/duration/gain/type badalke
+    // alag character wale sounds ban jaate hain.
+    function playTick({ freq, duration, gain, type }) {
+      const c = getCtx();
+      if (!c || c.state !== 'running') return;
+
+      const osc = c.createOscillator();
+      const amp = c.createGain();
+      osc.type = type;
+      // Har tick pe thoda pitch-jitter — robotic/repetitive na lage,
+      // ek natural "premium keyboard" feel ke liye (jaise iOS clicks).
+      const jitter = 1 + (Math.random() - 0.5) * 0.06;
+      osc.frequency.setValueAtTime(freq * jitter, c.currentTime);
+
+      amp.gain.setValueAtTime(gain, c.currentTime);
+      amp.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
+
+      osc.connect(amp).connect(c.destination);
+      osc.start();
+      osc.stop(c.currentTime + duration);
+    }
+
+    let lastUserTick = 0;
+    function userTick() {
+      // Fast typing ya paste pe flood na ho, isliye min-gap.
+      const now = performance.now();
+      if (now - lastUserTick < 35) return;
+      lastUserTick = now;
+      playTick({ freq: 1500, duration: 0.035, gain: 0.05, type: 'square' });
+    }
+
+    function aiTick() {
+      playTick({ freq: 720, duration: 0.05, gain: 0.045, type: 'sine' });
+    }
+
+    return { userTick, aiTick };
+  })();
+
+  // Bubble already has final rendered HTML (tags intact) — hum sirf text nodes ko
+  // khaali karke, order mein thoda-thoda reveal karte hain. Isse tags kabhi beech
+  // mein toot-te nahi (jaise markdown ka `**` ya code block).
+  function typewriterReveal(bubble, onDone) {
+    const walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) {
+      nodes.push({ node: n, full: n.textContent });
+      n.textContent = '';
+    }
+    if (!nodes.length) { if (onDone) onDone(); return; }
+
+    bubble.classList.add('typing');
+    const CHARS_PER_TICK = 3;
+    const TICK_MS = 22; // pehle 2 chars/14ms tha (~72 DOM writes/sec) — mobile pe scroll ke saath
+                         // reflow contention karta tha. Ab ~3 chars/22ms (~45/sec), roughly same speed.
+    let ni = 0, ci = 0, soundStep = 0;
+
+    function step() {
+      if (ni >= nodes.length) {
+        bubble.classList.remove('typing');
+        if (onDone) onDone();
+        return;
+      }
+      const entry = nodes[ni];
+      ci += CHARS_PER_TICK;
+      if (ci >= entry.full.length) {
+        entry.node.textContent = entry.full;
+        ni++;
+        ci = 0;
+      } else {
+        entry.node.textContent = entry.full.slice(0, ci);
+      }
+      // Har DOM-tick pe sound bajaayenge to ~45/sec ki buzz ban jaayegi —
+      // isliye har 3rd tick pe hi (~15/sec, ek natural tick-tick rhythm).
+      soundStep++;
+      if (soundStep % 3 === 0) SoundFX.aiTick();
+      scrollBottom();
+      setTimeout(step, TICK_MS);
+    }
+    step();
+  }
+
+  // ── Action Registry (frontend) ─────────────────────────────────────
+  // Backend jab bhi [ACTION:name]{...} bhejta hai, uska matching handler yahan
+  // se milta hai. Naya action-type add karna ho toh bas ek naya key daal do.
+  const ACTION_HANDLERS = {
+    ask_user: renderAskUser,
+    termux_run: renderTermuxRun,
+    quran_quiz_start: renderQuranQuizStart,
+  };
+
+  function renderAction(action, wrap) {
+    if (!action || !action.name) return;
+    const handler = ACTION_HANDLERS[action.name];
+    if (handler) handler(action.payload || {}, wrap);
+  }
+
+  // File-type se icon-category aur short label decide karta hai — sirf visual
+  // grouping ke liye hai, download logic pe koi asar nahi.
+  const FILE_TYPE_MAP = {
+    py: 'code', js: 'code', ts: 'code', jsx: 'code', html: 'code', css: 'code', sh: 'code', json: 'code',
+    csv: 'data', tsv: 'data', xlsx: 'data', xls: 'data',
+    txt: 'doc', md: 'doc', pdf: 'doc', docx: 'doc',
+  };
+  // TODO(icon-rule): ye custom hand-coded SVG hai, icons8 se nahi — poori app
+  // LED style follow karti hai, isliye chaaho to isko bhi
+  // https://img.icons8.com/led/{size}/insert-page.png jaisa LED <img> se
+  // replace kar sakte ho consistency ke liye. Abhi functionally sahi hai,
+  // sirf visual-consistency ka open item hai.
+  function fileIconSvg() {
+    // Generic document icon — rang category ke hisaab se CSS class decide karta hai.
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+  }
+  function downloadIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
+  }
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // Extension → MIME lookup for base64 (binary) sandbox output files, so
+  // downloaded images/PDFs/etc. actually open correctly instead of being
+  // offered as generic text/plain.
+  const FILE_MIME_MAP = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+    webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
+    pdf: 'application/pdf', zip: 'application/zip',
+    mp3: 'audio/mpeg', wav: 'audio/wav', mp4: 'video/mp4',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+  function mimeForExt(ext) {
+    return FILE_MIME_MAP[ext] || 'application/octet-stream';
+  }
+  // Turns a base64 string back into a real byte Blob. Building the Blob from
+  // the raw base64 *string* (old bug) would download a corrupted file — this
+  // decodes it back to actual bytes first.
+  function base64ToBlob(base64, mime) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
+
+  // Python sandbox run ke dauraan jo bhi nayi files current directory mein
+  // ban gayi thin, unhe yahan Claude-style file cards ki tarah dikhate hain —
+  // icon + naam + size, poora card tap karne pe seedha Blob se browser
+  // download trigger ho jaata hai, koi server round-trip nahi (file already
+  // client ke paas hai).
+  function renderOutputFiles(files, wrap) {
+    const box = document.createElement('div');
+    box.className = 'output-files';
+    for (const f of files) {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const category = FILE_TYPE_MAP[ext] || 'other';
+      // Base64 text is ~4/3 the size of the real decoded bytes — use the
+      // decoded length for binary files so the shown size is accurate.
+      const bytes = f.encoding === 'base64'
+        ? Math.floor((f.content || '').length * 3 / 4)
+        : new TextEncoder().encode(f.content || '').length;
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'output-file-card';
+
+      const icon = document.createElement('div');
+      icon.className = `output-file-icon ${category}`;
+      icon.innerHTML = fileIconSvg();
+
+      const meta = document.createElement('div');
+      meta.className = 'output-file-meta';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'output-file-name';
+      nameEl.textContent = f.name;
+      const subEl = document.createElement('div');
+      subEl.className = 'output-file-sub';
+      subEl.textContent = `${ext ? ext.toUpperCase() + ' · ' : ''}${formatFileSize(bytes)}`;
+      meta.append(nameEl, subEl);
+
+      const kind = f.kind === 'modified' ? 'modified' : 'new';
+      const badge = document.createElement('div');
+      badge.className = `output-file-badge ${kind}`;
+      badge.textContent = kind === 'modified' ? 'Modified' : 'New';
+
+      const dl = document.createElement('div');
+      dl.className = 'output-file-download';
+      dl.innerHTML = downloadIconSvg();
+
+      card.append(icon, meta, badge, dl);
+      card.addEventListener('click', () => {
+        // Binary sandbox output (images, PDFs, etc.) comes back base64-encoded
+        // from api/sandbox.js — must decode to real bytes with the correct
+        // MIME type, or the downloaded file is corrupted/unopenable.
+        const blob = f.encoding === 'base64'
+          ? base64ToBlob(f.content, mimeForExt(ext))
+          : new Blob([f.content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      });
+      box.appendChild(card);
+    }
+    wrap.appendChild(box);
+    scrollBottom();
+  }
+
+  // ── Quran Quiz — [ACTION:quran_quiz_start]{"from":1,"to":30} ───────────
+  // Bilkul run_code jaisa "client-side resolved" action hai — server ko
+  // ayat data ki zaroorat hi nahi, sab kuch yahin browser mein ho jaata hai.
+  // quran_full.json ek baar fetch/cache ho jaata hai (~2.2MB), phir sirf
+  // in-memory se filter+random-pick hota hai, koi dubara network call nahi.
+  let quranData = null;
+  let quranDataPromise = null;
+  // Ek quiz session (from/to/total/answered/correct) — jab tak "total" sawaal
+  // poore nahi ho jaate, agle har [ACTION:quran_quiz_start] pe isi session ko
+  // continue kiya jaata hai. Session khatam hote hi wapas null ho jaata hai,
+  // taaki agli baar "quiz khelna hai" bolne pe fresh session bane.
+  let activeQuiz = null;
+
+  function loadQuranData() {
+    if (!quranDataPromise) {
+      quranDataPromise = fetch('quran_full.json')
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then((data) => { quranData = data; return data; });
+    }
+    return quranDataPromise;
+  }
+
+  function pickRandomAyat(from, to) {
+    const pool = quranData.filter((a) => a.para >= from && a.para <= to);
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Quiz ka poora result — kaunsi ayat dikhi, sahi jawab kya tha, user ne
+  // kya diya, sahi/galat, aur session progress — yahi ek "user" turn ki
+  // tarah model ko wapas jaata hai (bilkul formatCodeResultForModel jaisa),
+  // taaki model kabhi kisi bhi cheez se "blind" na rahe, chahe UI mein card
+  // khud dikh raha ho, aur usko pata rahe kab session khatam ho gaya.
+  function formatQuizResultForModel(verse, userPara, userPip, isCorrect, session) {
+    const progressLine = `Sawaal ${session.answered}/${session.total} · Ab tak sahi: ${session.correct}/${session.answered}`;
+    const isLast = session.answered >= session.total;
+    return `[Quran Quiz card ka result:]\n`
+      + `Dikhayi gayi ayat: "${verse.text}"\n`
+      + `Sahi jawab — Surah: ${verse.surah_name}, Para: ${verse.para}, Page: ${verse.pip} (Absolute Quran Page: ${verse.page})\n`
+      + `User ka jawab — Para: ${userPara}, Page: ${userPip}\n`
+      + `Result: ${isCorrect ? 'SAHI ✅' : 'GALAT ❌'}\n`
+      + `${progressLine}\n`
+      + (isLast
+        ? `QUIZ SESSION KHATAM — ye is session ka aakhri sawaal tha.\n\n[Ab koi naya [ACTION:quran_quiz_start] mat bhej. Ek chhota final summary de (${session.correct}/${session.total} sahi) aur poochh naya session (naya range/count) khelna hai kya.]`
+        : `\n[Isi ke base pe turant ek short Hinglish reaction de — sahi tha to tareef kar, galat tha to sahi Surah/Para/Page bata ke halka encourage kar. Fir BINA poochhe seedha agla [ACTION:quran_quiz_start] bhej de usi from/to/total ke saath — session abhi khatam nahi hua.]`);
+  }
+
+  function renderQuranQuizStart(payload, wrap) {
+    let from = parseInt(payload && payload.from, 10);
+    let to = parseInt(payload && payload.to, 10);
+    let total = parseInt(payload && payload.total, 10);
+    if (!Number.isFinite(from)) from = 1;
+    if (!Number.isFinite(to)) to = 30;
+    from = Math.min(Math.max(from, 1), 30);
+    to = Math.min(Math.max(to, 1), 30);
+    if (from > to) { const t = from; from = to; to = t; }
+    if (!Number.isFinite(total) || total < 1) total = 10;
+
+    // Naya session sirf tabhi banao jab koi active session chal hi na raha ho
+    // (pehla sawaal). Baaki sab sawaalon ke liye wahi session object reuse
+    // hota hai, taaki progress/score sahi se accumulate ho.
+    if (!activeQuiz) {
+      activeQuiz = { from, to, total, answered: 0, correct: 0 };
+    }
+    const session = activeQuiz;
+
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'quiz-card-eyebrow';
+    eyebrow.innerHTML = `<img class="inline-icon" src="https://img.icons8.com/led/32/goal.png" alt="quiz"> Quiz · Para ${session.from}–${session.to} · Sawaal ${session.answered + 1}/${session.total}`;
+    card.appendChild(eyebrow);
+
+    const loading = document.createElement('div');
+    loading.className = 'quiz-card-loading';
+    loading.textContent = 'Ayat load ho rahi hai…';
+    card.appendChild(loading);
+
+    wrap.appendChild(card);
+    scrollBottom();
+
+    loadQuranData()
+      .then(() => {
+        const verse = pickRandomAyat(session.from, session.to);
+        loading.remove();
+        if (!verse) {
+          const err = document.createElement('div');
+          err.className = 'quiz-error';
+          err.textContent = 'Is para range mein koi ayat nahi mili.';
+          card.appendChild(err);
+          scrollBottom();
+          return;
+        }
+        buildQuizCardBody(card, verse, session);
+      })
+      .catch(() => {
+        loading.textContent = 'Ayat data load nahi ho saka — dobara try karo.';
+      });
+  }
+
+  function buildQuizCardBody(card, verse, session) {
+    const ayat = document.createElement('div');
+    ayat.className = 'quiz-ayat';
+    ayat.textContent = verse.text;
+    card.appendChild(ayat);
+
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'quiz-inputs-row';
+
+    const paraField = document.createElement('div');
+    paraField.className = 'quiz-field';
+    const paraLabel = document.createElement('label');
+    paraLabel.textContent = 'Para';
+    const paraInput = document.createElement('input');
+    paraInput.type = 'number';
+    paraInput.min = '1';
+    paraInput.max = '30';
+    paraInput.placeholder = 'e.g. 3';
+    paraField.append(paraLabel, paraInput);
+
+    const pageField = document.createElement('div');
+    pageField.className = 'quiz-field';
+    const pageLabel = document.createElement('label');
+    pageLabel.textContent = 'Page';
+    const pageInput = document.createElement('input');
+    pageInput.type = 'number';
+    pageInput.min = '1';
+    pageInput.max = '25';
+    pageInput.placeholder = 'e.g. 12';
+    pageField.append(pageLabel, pageInput);
+
+    inputsRow.append(paraField, pageField);
+    card.appendChild(inputsRow);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    submitBtn.className = 'quiz-submit-btn';
+    submitBtn.textContent = 'Jawab Bhejein';
+    card.appendChild(submitBtn);
+
+    const errBox = document.createElement('div');
+    errBox.className = 'quiz-error';
+    errBox.style.display = 'none';
+    card.appendChild(errBox);
+
+    submitBtn.addEventListener('click', () => {
+      const userPara = parseInt(paraInput.value, 10);
+      const userPip = parseInt(pageInput.value, 10);
+      if (!Number.isFinite(userPara) || !Number.isFinite(userPip)) {
+        errBox.textContent = 'Dono fields bharo — Para aur Page.';
+        errBox.style.display = 'block';
+        return;
+      }
+      errBox.style.display = 'none';
+
+      const isCorrect = userPara === verse.para && userPip === verse.pip;
+
+      paraInput.disabled = true;
+      pageInput.disabled = true;
+      submitBtn.disabled = true;
+
+      session.answered++;
+      if (isCorrect) session.correct++;
+
+      const feedback = document.createElement('div');
+      feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
+      feedback.innerHTML = isCorrect
+        ? `<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="sahi"> Sahi jawab! Surah ${escapeHtml(verse.surah_name)}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`
+        : `<img class="inline-icon" src="https://img.icons8.com/led/32/close-window.png" alt="galat"> Galat. Sahi jawab tha — Surah ${escapeHtml(verse.surah_name)}, Para ${verse.para}, Page ${verse.pip}. (${session.correct}/${session.answered})`;
+      card.appendChild(feedback);
+      scrollBottom();
+
+      const hiddenNote = formatQuizResultForModel(verse, userPara, userPip, isCorrect, session);
+      const displayLabel = `🎯 Para ${userPara}, Page ${userPip}`;
+
+      // Session poora ho gaya ho to agla card banne se pehle hi reset kar do,
+      // taaki agli baar "quiz khelna hai" bolne pe naya session shuru ho.
+      if (session.answered >= session.total) activeQuiz = null;
+
+      if (!busy) send(hiddenNote, displayLabel);
+    });
+
+    scrollBottom();
+  }
+
+  // [ACTION:termux_run]{"command":"..."} ke liye — bilkul same codeblock UI
+  // reuse karta hai jo ```bash fenced blocks ke liye already bani hai (Run/Stop/
+  // stdin sab wahi), taaki AI structured action se bheje ya plain code-fence
+  // se, user ko ek hi consistent widget dikhe.
+  function renderTermuxRun(payload, wrap) {
+    const command = payload && payload.command;
+    if (typeof command !== 'string' || !command.trim()) return;
+    const id = 'cb' + (cbCounter++);
+    codeStore[id] = { lang: 'bash', code: command.trim(), live: true };
+    const holder = document.createElement('div');
+    holder.innerHTML = codeBlockHtml(id);
+    wrap.appendChild(holder.firstElementChild);
+    scrollBottom();
+  }
+
+  function renderAskUser(payload, wrap) {
+    // Pehle se koi unclosed ask-user sheet/backdrop reh gaya ho (user ne
+    // button click karne ke bajaye seedha naya text type kar diya tha, jisse
+    // close() kabhi chala hi nahi) — usko turant hata do. Warna purane
+    // invisible/leftover fixed-position overlays DOM mein stack hote reh
+    // jaate hain aur naye sheet ke saath unpredictable dikhna/na-dikhna
+    // (intermittent) behavior create karte hain.
+    document.querySelectorAll('.ask-user-backdrop, .ask-user-sheet').forEach((el) => el.remove());
+
+    const { type, question, options } = payload;
+    if (!question || !Array.isArray(options) || !options.length) {
+      // Payload malformed/incomplete aaya (model kabhi "options" field ka
+      // naam/shape thoda alag bhej deta hai) — pehle ye chup-chaap return ho
+      // jaata tha, matlab bubble mein sirf placeholder text reh jaata tha
+      // aur koi sheet/button kabhi aata hi nahi tha, bina kisi signal ke. Ab
+      // kam se kam ek inline fallback line chhod dete hain taaki user ko
+      // pata chale kya karna hai, aur console mein exact wajah bhi log hoti
+      // hai (debug karne ke liye).
+      console.error('[renderAskUser] Malformed payload — question/options missing ya invalid:', payload);
+      const fallback = document.createElement('div');
+      fallback.className = 'ask-user-answered';
+      fallback.textContent = 'Options load nahi ho paaye — apna jawab seedha type karke bhej de.';
+      wrap.appendChild(fallback);
+      scrollBottom();
+      return;
+    }
+
+    const opts = options.slice(0, 4);
+    const isMulti = type === 'multi';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ask-user-backdrop';
+
+    const sheet = document.createElement('div');
+    sheet.className = 'ask-user-sheet';
+
+    const handle = document.createElement('div');
+    handle.className = 'ask-user-sheet-handle';
+    sheet.appendChild(handle);
+
+    const q = document.createElement('div');
+    q.className = 'ask-user-sheet-q';
+    q.textContent = question;
+    sheet.appendChild(q);
+
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'ask-user-sheet-opts';
+    sheet.appendChild(optsWrap);
+
+    // Sheet ko hata dete hain aur uski jagah chat ke andar ek chhota
+    // "aapka jawab" summary chhod dete hain — taaki scroll-back pe context
+    // dikhta rahe (jaise Claude ke apne ask_user widget mein hota hai).
+    function close() {
+      backdrop.classList.remove('show');
+      sheet.classList.remove('show');
+      setTimeout(() => {
+        backdrop.remove();
+        sheet.remove();
+      }, 250);
+    }
+
+    function markAnswered(text) {
+      const done = document.createElement('div');
+      done.className = 'ask-user-answered';
+      const b = document.createElement('b');
+      b.textContent = text;
+      done.append('Jawab: ', b);
+      wrap.appendChild(done);
+      scrollBottom();
+    }
+
+    if (isMulti) {
+      const selected = new Set();
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'ask-user-sheet-confirm';
+      confirmBtn.textContent = 'Confirm';
+      confirmBtn.disabled = true;
+
+      opts.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ask-user-sheet-opt';
+        const label = document.createElement('span');
+        label.textContent = opt;
+        const chk = document.createElement('span');
+        chk.className = 'chk sq';
+        btn.append(chk, label);
+        btn.addEventListener('click', () => {
+          if (selected.has(opt)) {
+            selected.delete(opt);
+            btn.classList.remove('selected');
+          } else {
+            selected.add(opt);
+            btn.classList.add('selected');
+          }
+          confirmBtn.disabled = selected.size === 0;
+        });
+        optsWrap.appendChild(btn);
+      });
+
+      confirmBtn.addEventListener('click', () => {
+        const answer = Array.from(selected).join(', ');
+        close();
+        if (answer) {
+          markAnswered(answer);
+          if (!busy) send(answer);
+        }
+      });
+      sheet.appendChild(confirmBtn);
+    } else {
+      opts.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ask-user-sheet-opt';
+        const label = document.createElement('span');
+        label.textContent = opt;
+        const chk = document.createElement('span');
+        chk.className = 'chk';
+        btn.append(chk, label);
+        btn.addEventListener('click', () => {
+          close();
+          markAnswered(opt);
+          if (!busy) send(opt);
+        });
+        optsWrap.appendChild(btn);
+      });
+    }
+
+    // ── "Ya apna jawab likho" — diye gaye options tak limited nahi rehna
+    // chahiye, user apna khud ka jawab type karke bhi bhej sake. Single aur
+    // multi dono modes mein same row kaam karta hai — jo bhi custom text ho,
+    // wahi seedha final jawab ban jaata hai (checkbox selection ignore ho
+    // jaati hai agar user ne custom text bhi type kar diya ho).
+    const customRow = document.createElement('div');
+    customRow.className = 'ask-user-sheet-custom';
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.placeholder = 'Ya apna jawab likho…';
+    const customBtn = document.createElement('button');
+    customBtn.type = 'button';
+    customBtn.textContent = 'Bhej';
+    customRow.append(customInput, customBtn);
+    sheet.appendChild(customRow);
+
+    function submitCustom() {
+      const answer = customInput.value.trim();
+      if (!answer) return;
+      close();
+      markAnswered(answer);
+      if (!busy) send(answer);
+    }
+    customBtn.addEventListener('click', submitCustom);
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitCustom();
+    });
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(sheet);
+    // Ek frame chhod ke class add karo, taaki transform:translateY(100%) → 0
+    // ka transition trigger ho (same-frame class add pe browser transition skip
+    // kar sakta hai).
+    requestAnimationFrame(() => {
+      backdrop.classList.add('show');
+      sheet.classList.add('show');
+    });
+    scrollBottom();
+  }
+
+  // ── Termux Bridge setup guide card ──────────────────────────────────
+  // Ab sirf do jagah se trigger hota hai: (1) "+ Add" menu ka "Termux
+  // Bridge Connect" button (deterministic, user ne explicitly maanga),
+  // ya (2) khud AI, agar user ne chat mein connect karne ko kaha aur AI
+  // ko lage ki setup guide dikhana hi sahi jawab hai. Isse purana
+  // keyword-match intercept hata diya gaya — wo har us message ko hijack
+  // kar leta tha jisme "termux" + "connect" dono words kahin bhi aa
+  // jaayein, chahe user status pooch raha ho ya kuch aur — jisse AI tak
+  // wo message kabhi pahunchta hi nahi tha.
+  const TERMUX_SETUP_GUIDE_MD =
+`Chalo Termux Bridge connect karte hain — pehle Termux app mein ye steps karo:
+
+1. \`pkg install nodejs -y\`
+2. \`mkdir -p ~/chaman-bridge && cd ~/chaman-bridge\`
+3. \`server.js\` aur \`package.json\` files isi folder mein daal do
+4. \`npm install\`
+5. \`npm start\` — pehli baar ek TOKEN print hoga, usko copy kar lo
+6. Neeche button dabaao aur wahi Port/Token paste karke "Save & Connect" dabao
+7. Browser ka "local network access" permission popup allow karna zaroori hai
+8. Termux band/restart hone ke baad dobara \`cd ~/chaman-bridge && npm start\` chalana padega`;
+
+  function addBridgeConnectCard(isReturningUser) {
+    const emptyEl = $main.querySelector('.empty');
+    if (emptyEl) emptyEl.remove();
+
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = renderMarkdown(
+      isReturningUser
+        ? 'Termux Bridge pehle se set up hai — bas connect karna hai.'
+        : TERMUX_SETUP_GUIDE_MD
+    );
+    wrap.appendChild(bubble);
+
+    // Fixed restart command — user ko khud apne Termux app mein paste karke
+    // chalana hai (bridge se "▶ Run" se nahi chala sakte, kyunki abhi bridge
+    // server khud hi band hai — usko start karne ke liye hi ye command hai).
+    // Isliye lang ko SHELL_LANGS se bahar rakha hai, taaki sirf Copy button
+    // aaye, koi Run/stdin UI nahi.
+    const cmdId = 'cb' + (cbCounter++);
+    codeStore[cmdId] = { lang: 'text', code: 'cd chaman-bridge && npm start' };
+    const cmdWrap = document.createElement('div');
+    cmdWrap.innerHTML = codeBlockHtml(cmdId);
+    wrap.appendChild(cmdWrap.firstElementChild);
+
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'bridge-inline-actions';
+    const connectBtn = document.createElement('button');
+    connectBtn.type = 'button';
+    connectBtn.className = 'bridge-inline-connect-btn';
+    connectBtn.innerHTML = isReturningUser
+      ? '<img class="inline-icon" src="https://img.icons8.com/led/32/share-2.png" alt="connect"> Connect'
+      : '<img class="inline-icon" src="https://img.icons8.com/led/32/share-2.png" alt="connect"> Setup karke Connect karo';
+    // Same settings modal reuse karte hain (Save & Connect wahi hai) —
+    // returning user ke liye pehle se token/port bhara hua milega.
+    connectBtn.addEventListener('click', () => showBridgeSettingsModal());
+    actionsRow.appendChild(connectBtn);
+    wrap.appendChild(actionsRow);
+
+    row.appendChild(wrap);
+    $main.appendChild(row);
+    scrollBottom(true);
+  }
+
+  // Footer (meta line + Copy button) + action-widget + output-files —
+  // shared banata hai taaki addAssistantBubble aur appendAssistantContinuation
+  // (dono) isi ek jagah se footer banayein, duplicate logic na ho.
+  // ── Blank-bubble handling ──────────────────────────────────────────
+  // renderAction() action ka UI (ask_user sheet, termux_run codeblock,
+  // quiz card) hamesha msg-footer ke NEECHE, bubble ke BAHAR render karta
+  // hai (buildMsgFooter line ~3953). Jab model sirf ek [ACTION:...] tag
+  // bhejta hai bina kisi lead-in prose ke (jo bohut common hai — jaise
+  // seedha ask_user pooch lena), to bubble ka apna text area 100% khaali
+  // reh jaata tha — user ko lagta blank reply aayi (tokens phir bhi
+  // consume ho chuke hote). Purana fallback (`!action` check) isko
+  // "action hai to theek hai" maan ke skip kar deta tha, lekin visually
+  // wo theek nahi lagta kyunki action ka UI bubble ke andar nahi hota.
+  // Ab har action-type ke liye ek chhota contextual placeholder text
+  // dete hain, aur sirf tab generic "kuch gadbad" error dikhate hain
+  // jab koi action bhi na ho.
+  const ACTION_EMPTY_TEXT = {
+    ask_user: 'Neeche diye gaye options mein se chuno:',
+    termux_run: 'Command taiyaar hai, neeche dekh:',
+    quran_quiz_start: 'Quiz shuru kar raha hoon, neeche dekh:'
+  };
+  function resolveBubbleText(text, action) {
+    if (text && text.trim()) return text;
+    if (action && action.name) {
+      return ACTION_EMPTY_TEXT[action.name] || 'Neeche dekh:';
+    }
+    return 'Kuch gadbad ho gayi jawab render karte waqt — dobara try kar.';
+  }
+
+  function buildMsgFooter(copyText, meta, wrap, action, outputFiles) {
+    const footer = document.createElement('div');
+    footer.className = 'msg-footer';
+
+    if (meta) {
+      const metaEl = document.createElement('span');
+      metaEl.className = 'meta';
+      metaEl.textContent = meta;
+      footer.appendChild(metaEl);
+    }
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'msg-copy-btn';
+    copyBtn.textContent = '⧉ Copy';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(copyText).then(() => {
+        copyBtn.innerHTML = '<img class="inline-icon" src="https://img.icons8.com/led/32/ok.png" alt="copied"> Copied';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = '⧉ Copy';
+          copyBtn.classList.remove('copied');
+        }, 1500);
+      }).catch(() => {
+        copyBtn.textContent = 'Copy fail hua';
+        setTimeout(() => { copyBtn.textContent = '⧉ Copy'; }, 1500);
+      });
+    });
+    footer.appendChild(copyBtn);
+
+    wrap.appendChild(footer);
+    if (action) renderAction(action, wrap);
+    if (outputFiles && outputFiles.length) renderOutputFiles(outputFiles, wrap);
+    scrollBottom();
+  }
+
+  // Ek command ke Run poora hone ke baad AI ka agla jawab isi function se
+  // — NAYI bubble/row nahi banti, isi purani message ke "wrap" ke andar hi
+  // ek naya chunk jud jaata hai (jaise ek hi jawab beech mein ruk ke phir
+  // se chalu hua ho). Purana footer hata ke naya chunk ke baad wapas bana
+  // dete hain. wrapEl-level append use karte hain (na ki sirf bubble ke
+  // andar) taaki [ACTION:termux_run] wale command-widget (jo bubble ke
+  // BAHAR, wrap mein render hote hain) ke baad bhi ye sahi order mein aaye.
+  function appendAssistantContinuation(target, text, meta, action, outputFiles, animate) {
+    const { wrapEl } = target;
+    const oldFooter = wrapEl.querySelector('.msg-footer');
+    if (oldFooter) oldFooter.remove();
+
+    text = resolveBubbleText(text, action);
+    const chunk = document.createElement('div');
+    chunk.className = 'bubble continuation-bubble';
+    chunk.innerHTML = renderMarkdown(text, !!animate);
+    wrapEl.appendChild(chunk);
+    scrollBottom();
+
+    const finish = () => buildMsgFooter(wrapEl.textContent, meta, wrapEl, action, outputFiles);
+    if (animate) typewriterReveal(chunk, finish); else finish();
+  }
+
+  function addAssistantBubble(text, meta, isError, animate, action, outputFiles) {
+    // Backend action-parse fail ho jaaye aur text bhi khaali ho, to poori
+    // bubble blank na dikhe (jaisa pehle "Groq · model" + Copy button ke
+    // saath khaali box dikhta tha) — action-aware placeholder ya generic
+    // fallback line de do (dekh resolveBubbleText).
+    if (!isError) {
+      text = resolveBubbleText(text, action);
+    }
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (isError ? ' err' : '');
+    if (isError) {
+      bubble.textContent = text;
+    } else {
+      bubble.innerHTML = renderMarkdown(text, !!animate);
+    }
+    wrap.appendChild(bubble);
+    row.appendChild(wrap);
+    $main.appendChild(row);
+
+    function attachMeta() {
+      buildMsgFooter(text, meta, wrap, action, outputFiles);
+    }
+
+    if (!isError && animate) {
+      // meta (provider · model) sirf typing khatam hone ke baad dikhta hai
+      typewriterReveal(bubble, attachMeta);
+    } else {
+      attachMeta();
+    }
+    scrollBottom();
+    return { bubbleEl: bubble, wrapEl: wrap };
+  }
+
+  function lightDot(providerName) {
+    $dots.forEach(d => d.classList.toggle('live', d.dataset.provider === providerName));
+  }
+
+  // Live streaming ke dauraan bana raha bubble — jaise-jaise 'token' events
+  // aate hain, isi object ke andar text accumulate hota hai aur bubble ka
+  // innerHTML baar-baar (poora, live-mode) re-render hota hai. Real
+  // character-by-character network streaming hi ab "typing" effect hai —
+  // koi alag fake-typewriter animation ab yahan nahi chalti.
+  function ensureStreamBubble(state, thinkingRow, continueInto) {
+    if (state.streamed) return state.streamed;
+    if (thinkingRow && thinkingRow.parentNode) thinkingRow.remove();
+
+    if (continueInto && continueInto.wrapEl && document.body.contains(continueInto.wrapEl)) {
+      const oldFooter = continueInto.wrapEl.querySelector('.msg-footer');
+      if (oldFooter) oldFooter.remove();
+      const chunk = document.createElement('div');
+      chunk.className = 'bubble continuation-bubble typing';
+      continueInto.wrapEl.appendChild(chunk);
+      state.streamed = { bubbleEl: chunk, wrapEl: continueInto.wrapEl, rowEl: null, raw: '' };
+    } else {
+      const row = document.createElement('div');
+      row.className = 'row assistant';
+      const wrap = document.createElement('div');
+      wrap.className = 'wrap';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble typing';
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      $main.appendChild(row);
+      state.streamed = { bubbleEl: bubble, wrapEl: wrap, rowEl: row, raw: '' };
+    }
+    scrollBottom();
+    return state.streamed;
+  }
+
+  let lastStreamTick = 0;
+  function appendStreamToken(state, thinkingRow, continueInto, text) {
+    const s = ensureStreamBubble(state, thinkingRow, continueInto);
+    s.raw += text;
+    // live=false yahan jaanbujh ke: renderMarkdown har call pe naye
+    // codeStore/mathStore ids allocate karta hai (poora re-parse), aur agar
+    // koi shell ```code``` fence stream ho raha ho to live=true har
+    // intermediate render pe ek NAYA pendingRun-lock id daal deta — jo kabhi
+    // clear nahi hota (asli Run to sirf FINAL id pe hoga), aur chat hamesha
+    // ke liye locked reh jaati. Isliye beech mein hamesha false; asli
+    // "fresh message" registration sirf ek baar, finalize par (live=true).
+    s.bubbleEl.innerHTML = renderMarkdown(s.raw, false);
+    // Real network chunks mein already-multiple characters hote hain, isliye
+    // har chunk pe tick bajaana zaroorat se zyada dense ho jaata — throttle
+    // karte hain taaki old fake-typewriter jaisi hi natural rhythm lage.
+    const now = performance.now();
+    if (now - lastStreamTick > 60) {
+      lastStreamTick = now;
+      SoundFX.aiTick();
+    }
+    scrollBottom();
+  }
+
+  // Ek single /api/chat round-trip: request bhejta hai, NDJSON stream padhta
+  // hai — live web_search/code status update karte hue AUR asli text-tokens
+  // ko live bubble mein append karte hue (real streaming). thinkingRow
+  // already-mounted honi chahiye (caller banata hai). continueInto (optional)
+  // diya ho to naya row/bubble banane ki jagah usi purani message ke wrap
+  // mein continuation-chunk ki tarah stream hota hai.
+  // Return: { finalEvent, errorEvent, aborted, streamed } — streamed (agar
+  // koi text live stream hua ho) caller ko final render/footer attach karne
+  // ke liye milta hai, taaki dobara duplicate bubble na bane.
+  async function fetchExchange(apiMessages, thinkingRow, continueInto) {
+    let searchRow = null; // pehli 'status' event aane pe hi banti hai
+    const state = { streamed: null };
+    const controller = new AbortController();
+    currentAbortController = controller;
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages, termuxStatus: Bridge.status }),
+        signal: controller.signal,
+      });
+
+      let finalEvent = null;
+      let errorEvent = null;
+
+      if (res.body && res.body.getReader) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let nlIndex;
+          while ((nlIndex = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, nlIndex).trim();
+            buffer = buffer.slice(nlIndex + 1);
+            if (!line) continue;
+
+            let event;
+            try { event = JSON.parse(line); } catch { continue; }
+
+            if (event.type === 'status') {
+              if (!searchRow) {
+                if (thinkingRow && thinkingRow.parentNode) thinkingRow.remove();
+                searchRow = addSearchStatus();
+              }
+              updateSearchStatus(searchRow, event.phase, event.query, event.count);
+            } else if (event.type === 'token') {
+              appendStreamToken(state, thinkingRow, continueInto, event.text);
+            } else if (event.type === 'final') {
+              finalEvent = event;
+            } else if (event.type === 'error') {
+              errorEvent = event;
+            }
+          }
+        }
+      } else {
+        // Fallback: streaming reader available nahi hai (bahut purana browser) —
+        // seedha JSON ki tarah parse karo (naya backend NDJSON bhejta hai, isliye
+        // ye path sirf ek safety net hai). Isme koi live token nahi aata,
+        // isliye 'streamed' khaali rehta hai aur caller purani jagah instant render karega.
+        const raw = await res.text();
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const event = JSON.parse(trimmed);
+            if (event.type === 'final') finalEvent = event;
+            else if (event.type === 'error') errorEvent = event;
+          } catch { /* ignore malformed line */ }
+        }
+      }
+
+      if (searchRow) searchRow.remove();
+      return { finalEvent, errorEvent, streamed: state.streamed };
+    } catch (err) {
+      if (searchRow) searchRow.remove();
+      // User ne khud Stop dabaya — ye ek real error nahi hai, isliye alag se
+      // flag karte hain taaki caller koi error-bubble na dikhaye, chup-chaap ruk jaaye.
+      if (err && err.name === 'AbortError') {
+        return { finalEvent: null, errorEvent: null, aborted: true, streamed: state.streamed };
+      }
+      return { finalEvent: null, errorEvent: { error: 'Network error — connection check kar.' }, streamed: state.streamed };
+    } finally {
+      if (currentAbortController === controller) currentAbortController = null;
+    }
+  }
+
+  // fetchExchange ke live-streamed bubble (agar bana ho) ko final text ke
+  // saath finalize karta hai (poora, non-live re-render — code blocks ka
+  // "still typing" state hata ke asli Run/Copy UI bana deta hai), aur footer
+  // (meta + action widget) attach karta hai. Agar koi live bubble nahi bana
+  // tha (pure action-only turn, ya non-streaming fallback), to purani tarah
+  // ek naya bubble instant bana deta hai — na ki fake-typewriter animate.
+  function finalizeStreamedOrNew(streamed, text, meta, action, outputFiles) {
+    // addAssistantBubble() ke fallback ka same logic ab resolveBubbleText()
+    // se milta hai — live-streamed path pehle isse skip kar deta tha, isliye
+    // koi bhi action-only turn (run_code iteration-exhaust ho, ya seedha
+    // ask_user/termux_run ho) blank bubble chhod deta tha jabki tokens
+    // consume ho chuke hote. Ab dono paths consistent hain.
+    text = resolveBubbleText(text, action);
+    if (streamed && streamed.bubbleEl) {
+      // live=true: ye ab is turn ka authoritative, ek-baar-hi render hai —
+      // isi pass mein shell code-fence (agar koi ho) ka asli id register
+      // hota hai aur zaroorat pade to pending-run lock lagta hai (jaisa
+      // pehle full-text ke pehle hi renderMarkdown call mein hota tha).
+      streamed.bubbleEl.innerHTML = renderMarkdown(text, true);
+      streamed.bubbleEl.classList.remove('typing');
+      buildMsgFooter(text, meta, streamed.wrapEl, action, outputFiles);
+      return { bubbleEl: streamed.bubbleEl, wrapEl: streamed.wrapEl };
+    }
+    // Koi live text stream nahi hua tha (pure action turn, ya non-streaming
+    // fallback) — purani tarah instant/animate render (animate=true taaki
+    // shell-fence lock behavior bhi wahi rahe jo pehle tha).
+    return addAssistantBubble(text, meta, false, true, action, outputFiles);
+  }
+
+  // User ne Stop dabaya jab bubble abhi live stream ho rahi thi — jitna text
+  // aa chuka tha usi ko final maan ke bubble finalize kar do (poora ura mat
+  // do), taaki "beech mein roka" ka matlab ho ki jo likha ja chuka tha wo
+  // dikhta rahe, na ki poori bubble ghayab ho jaaye. Kuch bhi stream nahi
+  // hua tha (turant hi rok diya) to khaali bubble/row hata do.
+  function finalizeAbortedStream(streamed) {
+    if (!streamed || !streamed.bubbleEl) return;
+    const text = streamed.raw.trim();
+    if (!text) {
+      if (streamed.rowEl) streamed.rowEl.remove();
+      else streamed.bubbleEl.remove();
+      return;
+    }
+    streamed.bubbleEl.innerHTML = renderMarkdown(streamed.raw, false);
+    streamed.bubbleEl.classList.remove('typing');
+    buildMsgFooter(streamed.raw, 'Rok diya gaya', streamed.wrapEl, null, []);
+    history.push({ role: 'assistant', content: streamed.raw });
+    persistTurn();
+  }
+
+  // Agar model ne [ACTION:run_code] maanga hai, to (web_search ki tarah, bas
+  // client-side) khud iss loop mein hi resolve kar dete hain: code Pyodide
+  // sandbox mein chalao, result ko agla "user" turn bana ke wapas model ko
+  // bhej do, jab tak wo final (non-run_code) jawab na de de ya max iterations
+  // khatam na ho jaayein.
+  const MAX_CODE_ITERATIONS = 3;
+
+  async function send(text, displayText, filesMeta, silent, continueInto, visionShortCircuit) {
+    displayText = displayText != null ? displayText : text;
+    filesMeta = filesMeta || [];
+    // silent=true: Termux run ka result jaisi cheezein — AI ke context mein
+    // jaani chahiye lekin chat mein ek alag "Termux run (exit N)" bubble ki
+    // tarah dikhni nahi chahiye (result already codeblock ke andar dikh
+    // chuka hai). Flag history mein bhi save hota hai taaki session reload
+    // pe bhi ye dobara na dikhe.
+    history.push({ role: 'user', content: text, displayText, files: filesMeta, silent: !!silent });
+    if (!silent) addUserBubble(displayText, filesMeta);
+    $input.value = '';
+    $input.style.height = 'auto';
+
+    // ★ Vision short-circuit: NVIDIA ne khud decide kiya tha (needsMainModel:
+    // false) ki uska image-description/OCR hi user ke liye final jawab ban
+    // sakta hai — is case mein poora fetchExchange/provider-fallback loop
+    // (Groq/OpenRouter/Cerebras) skip kar dete hain. Fayda: kam latency, kam
+    // tokens (ek hi API call — NVIDIA — poore turn ke liye), aur "NVIDIA
+    // dekhe → text model ko bataye → text model dubara likhe" wala faltu
+    // extra round-trip nahi hota jab zaroorat hi nahi thi.
+    if (visionShortCircuit) {
+      busy = true;
+      setSendButtonBusy(true);
+      const thinkingRow = addThinking();
+      // Chhota, natural delay — turant hi jawab aana "kuch process hi nahi
+      // hua" jaisa lag sakta tha; real network latency jaisa feel dete hain.
+      await new Promise((r) => setTimeout(r, 250));
+      if (thinkingRow.parentNode) thinkingRow.remove();
+      addAssistantBubble(visionShortCircuit.text, visionShortCircuit.meta, false, true);
+      history.push({ role: 'assistant', content: visionShortCircuit.text });
+      persistTurn();
+      busy = false;
+      setSendButtonBusy(false);
+      $input.focus();
+      return;
+    }
+
+    busy = true;
+    setSendButtonBusy(true);
+
+    try {
+      let iter = 0;
+      const producedFiles = []; // is turn ke saare run_code iterations mein bani output files ka collection
+      let turnTokens = 0; // is poore turn (saare run_code round-trips samet) ka cumulative token cost
+
+      while (true) {
+        const thinkingRow = addThinking();
+        const { finalEvent, errorEvent, aborted, streamed } = await fetchExchange(
+          history.map(m => ({ role: m.role, content: m.content })),
+          thinkingRow,
+          continueInto
+        );
+        if (thinkingRow.parentNode) thinkingRow.remove();
+
+        if (aborted) {
+          // User ne khud Stop dabaya — jo text live-stream ho chuka tha
+          // (agar koi ho) usi ko final maan ke bubble finalize kar do, taaki
+          // "rokna" ka matlab "sab kuch ghayab" na ho. Turant hi roka tha
+          // (kuch bhi stream nahi hua) to bas chup-chaap ruk jao.
+          finalizeAbortedStream(streamed);
+          return;
+        }
+
+        if (errorEvent) {
+          lightDot(null);
+          // Agar error se pehle kuch text stream ho chuka tha (rare — kabhi
+          // provider beech mein hi drop ho jaaye), us khaali/partial bubble
+          // ko hata ke hi error dikhao, warna do bubbles dikhengi.
+          if (streamed && streamed.bubbleEl && !streamed.raw.trim()) {
+            if (streamed.rowEl) streamed.rowEl.remove(); else streamed.bubbleEl.remove();
+          }
+          let errText = errorEvent.error || 'Kuch gadbad ho gayi.';
+          if (Array.isArray(errorEvent.details) && errorEvent.details.length) {
+            errText += '\n\n— Details —\n' + errorEvent.details.join('\n');
+          }
+          addAssistantBubble(errText, null, true);
+          return;
+        }
+        if (!finalEvent) {
+          addAssistantBubble('Kuch gadbad ho gayi — response incomplete tha.', null, true);
+          return;
+        }
+
+        // Har round-trip ka token cost real hai (chahe ye final answer ho ya
+        // ek intermediate run_code iteration) — isliye har baar jodte hain,
+        // sirf aakhri wale ka nahi.
+        if (finalEvent.usage && typeof finalEvent.usage.total === 'number') {
+          turnTokens += finalEvent.usage.total;
+          sessionTokenTotal += finalEvent.usage.total;
+          updateTokenBadge(finalEvent.usage.total);
+        }
+
+        if (finalEvent.action && finalEvent.action.name === 'run_code' && iter < MAX_CODE_ITERATIONS) {
+          iter++;
+          const code = finalEvent.action.payload && finalEvent.action.payload.code;
+          if (typeof code !== 'string' || !code.trim()) {
+            // Malformed request — jo bhi text mila usi ko final maan lo.
+            history.push({
+              role: 'assistant',
+              content: finalEvent.reply,
+              provider: finalEvent.provider,
+              model: finalEvent.model,
+              tokens: turnTokens ? { total: turnTokens } : undefined,
+            });
+            persistTurn();
+            lightDot(finalEvent.provider);
+            finalizeStreamedOrNew(
+              streamed,
+              finalEvent.reply,
+              `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`,
+              null, producedFiles
+            );
+            return;
+          }
+
+          const codeRow = addCodeStatus();
+          updateCodeStatus(codeRow, 'running');
+          const result = await runPythonSandboxed(code, (phase, detail) => {
+            updateCodeStatus(codeRow, phase, detail);
+          });
+          updateCodeStatus(codeRow, result.ok ? 'done' : 'failed');
+          setTimeout(() => codeRow.remove(), 700);
+
+          // Nayi bani files ko sandboxFiles mein bhi merge karo (taaki agla
+          // iteration/run inhe bhi "existing file" ki tarah dekh sake) aur
+          // final turn pe download-chips ke liye collect kar lo.
+          if (Array.isArray(result.outputFiles)) {
+            for (const f of result.outputFiles) {
+              // outputFiles ab {content, encoding} carry karti hain (base64
+              // binary files ke liye) — wahi shape yahan bhi preserve karo,
+              // taaki agla run bhi is file ko real bytes ki tarah access kar sake.
+              sandboxFiles[f.name] = f.encoding === 'base64'
+                ? { content: f.content, encoding: 'base64' }
+                : f.content;
+              const existingIdx = producedFiles.findIndex((p) => p.name === f.name);
+              if (existingIdx !== -1) producedFiles.splice(existingIdx, 1);
+              producedFiles.push(f);
+            }
+          }
+
+          // Model ka action-call assistant turn ban jaata hai, aur code ka
+          // result agle "user" turn ki tarah feed hota hai.
+          history.push({ role: 'assistant', content: finalEvent.reply });
+          history.push({ role: 'user', content: formatCodeResultForModel(code, result) });
+          continue;
+        }
+
+        // run_code nahi maanga gaya (ya iterations khatam) — ye final answer hai.
+        const canContinueBubble = !!(continueInto && continueInto.wrapEl && document.body.contains(continueInto.wrapEl));
+        history.push({
+          role: 'assistant',
+          content: finalEvent.reply,
+          provider: finalEvent.provider,
+          model: finalEvent.model,
+          tokens: turnTokens ? { total: turnTokens } : undefined,
+          continuesPrevious: canContinueBubble,
+        });
+        persistTurn(); // pehla successful reply aate hi session (agar naya hai) auto-ban jaata hai
+        lightDot(finalEvent.provider);
+        const metaText = `${finalEvent.provider} · ${finalEvent.model || ''}${turnTokens ? ' · ' + formatTokenCount(turnTokens) + ' tok' : ''}`;
+        if (canContinueBubble && !(streamed && streamed.bubbleEl)) {
+          // Command ka Run poora hua tha — text live stream nahi hua (jaise
+          // ek pure-action turn), isliye purani tarah instant continuation
+          // chunk jod do (isi purani wali mein, nayi bubble nahi). animate=
+          // true taaki agar reply ke andar khud koi fresh shell code-fence
+          // ho to uska pending-run lock bhi sahi se lagta rahe.
+          appendAssistantContinuation(continueInto, finalEvent.reply, metaText, finalEvent.action, producedFiles, true);
+        } else {
+          // Ya to text already live stream ho chuka tha (streamed.bubbleEl
+          // maujood hai — chahe continuation ke andar ho ya naya row), ya
+          // koi continuation target hi nahi tha — dono cases finalize karo.
+          finalizeStreamedOrNew(streamed, finalEvent.reply, metaText, finalEvent.action, producedFiles);
+        }
+        return;
+      }
+    } finally {
+      busy = false;
+      setSendButtonBusy(false);
+      currentAbortController = null;
+      // setSendButtonBusy upar $send.disabled ko unconditionally false kar
+      // deta hai — agar is turn mein koi shell command abhi bhi un-run pada
+      // hai to lock wapas laga do, warna user Run dabaye bina hi agla
+      // message bhej payega.
+      setRunLock(pendingRunIds.size > 0);
+      if (!pendingRunIds.size) $input.focus();
+    }
+  }
+
+  $form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (busy) {
+      // Send button abhi "Stop" mode mein hai (busy → disabled nahi, bas
+      // icon badla hai) — isi click se chal rahi request abort ho jaati hai.
+      stopGeneration();
+      return;
+    }
+    const text = $input.value.trim();
+    if (!text && attachedFiles.length === 0) return;
+    if (attachedFiles.some((f) => f.status === 'reading')) return; // file abhi padhi ja rahi hai, thoda ruko
+
+    const imageFiles = attachedFiles.filter((f) => f.kind === 'image' && f.status === 'ready');
+    const otherFiles = attachedFiles.filter((f) => f.kind !== 'image');
+
+    // Vision analysis SEND ke waqt hoti hai (attach ke waqt nahi) — taaki
+    // NVIDIA ko user ka poora typed text (agar likha ho) bhi mile, iske
+    // bina uska "description hi kaafi hai ya main model chahiye" decision
+    // sahi nahi ban sakta (dekh analyzeImageWithVision ka comment).
+    if (imageFiles.length && !imageFiles.some((f) => f.visionStatus === 'analyzed' || f.visionStatus === 'vision_error')) {
+      setSendButtonBusy(true);
+      busy = true;
+      await Promise.all(imageFiles.map((f) => analyzeImageWithVision(f, text)));
+      busy = false;
+      setSendButtonBusy(false);
+    }
+
+    // Short-circuit sirf tab jab: (a) exactly ek image hai (multiple images
+    // ka combined "kaafi hai ya nahi" decide karna ambiguous ho jaata),
+    // (b) koi aur non-image file attached nahi hai (unka apna context bhi
+    // chahiye hoga model ko), aur (c) us image ka apna NVIDIA-decision
+    // "main model ki zaroorat nahi" (needsMainModel: false) hai. Baaki har
+    // case mein normal flow (main model ko poora context ke saath bhejo).
+    const singleImage = imageFiles.length === 1 ? imageFiles[0] : null;
+    const canShortCircuit =
+      singleImage &&
+      otherFiles.length === 0 &&
+      singleImage.visionStatus === 'analyzed' &&
+      singleImage.needsMainModel === false;
+
+    const filesMeta = attachedFiles.map((f) => ({ name: f.name, kind: f.kind, status: f.status }));
+
+    if (canShortCircuit) {
+      const visionText = singleImage.visionDescription;
+      attachedFiles = [];
+      renderAttachChips();
+      send(
+        text || '(image bheji)',
+        text || '(image bheji)',
+        filesMeta,
+        false,
+        null,
+        { text: visionText, meta: 'NVIDIA Vision · ' + (singleImage.visionModel || 'kimi-k3') }
+      );
+      return;
+    }
+
+    const outgoing = buildOutgoingMessage(text, attachedFiles);
+    attachedFiles = [];
+    renderAttachChips();
+
+    send(outgoing, text, filesMeta);
+  });
+</script>
+</body>
+</html>
